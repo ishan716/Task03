@@ -1,6 +1,24 @@
 import { useEffect, useState } from "react";
 import Modal from "./Modal.jsx";
-import { apiGet, apiJSON } from "../src/api.js";
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+async function apiGet(path) {
+  const res = await fetch(`${API_BASE}${path}`, { credentials: "include" });
+  if (!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
+  return res.json();
+}
+
+async function apiJSON(method, path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(body ?? {})
+  });
+  if (!res.ok) throw new Error(`${method} ${path} -> ${res.status}`);
+  return res.json();
+}
 
 export default function InterestsDialog({ open, onClose, onSaved }) {
   const [categories, setCategories] = useState([]);
