@@ -6,19 +6,13 @@ const ShareButton = ({ event, eventId }) => {
   const [showNotification, setShowNotification] = useState(false);
 
   const handleShare = async () => {
-    // Create a shareable link with event details
     const shareLink = `${window.location.origin}?eventId=${eventId}&eventTitle=${encodeURIComponent(
       event.title || event.event_title
     )}&location=${encodeURIComponent(event.location || 'No location')}`;
 
     try {
-      // Copy to clipboard
       await navigator.clipboard.writeText(shareLink);
-      
-      // Show notification
       setShowNotification(true);
-      
-      // Hide notification after 2 seconds
       setTimeout(() => setShowNotification(false), 2000);
     } catch (err) {
       console.error('Failed to copy link:', err);
@@ -27,17 +21,16 @@ const ShareButton = ({ event, eventId }) => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <button
         onClick={handleShare}
-        className="flex-1 py-2 rounded-lg transition-all duration-300 bg-gray-100 text-gray-700 hover:bg-blue-50"
+        className="w-full px-3 py-2 rounded-lg transition-all duration-300 bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium text-sm"
       >
         🔗 Share
       </button>
       
-      {/* Notification popup */}
       {showNotification && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-green-600 text-white text-sm rounded-lg whitespace-nowrap shadow-lg z-50">
+        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-green-600 text-white text-sm rounded-lg whitespace-nowrap shadow-lg z-50">
           ✅ Link copied!
         </div>
       )}
@@ -90,8 +83,8 @@ const CommentSection = ({ eventId }) => {
   };
 
   return (
-    <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-      <h4 className="font-semibold text-gray-800 mb-3">💬 Comments ({comments.length})</h4>
+    <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+      <h4 className="font-semibold text-blue-900 mb-3">💬 Comments ({comments.length})</h4>
       
       <div className="space-y-2 mb-3">
         <input
@@ -99,13 +92,13 @@ const CommentSection = ({ eventId }) => {
           placeholder="Your name"
           value={authorName}
           onChange={(e) => setAuthorName(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+          className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
         />
         <textarea
           placeholder="Add your comment..."
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+          className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
           rows="3"
         />
         <button
@@ -113,23 +106,23 @@ const CommentSection = ({ eventId }) => {
           disabled={loading}
           className="w-full py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all disabled:bg-gray-400 text-sm"
         >
-          {loading ? 'Adding...' : 'Add Comment'}
+          {loading ? 'Adding...' : '📝 Add Comment'}
         </button>
       </div>
 
       {comments.length === 0 ? (
-        <p className="text-gray-500 text-sm text-center py-3">No comments yet. Be the first!</p>
+        <p className="text-blue-700 text-sm text-center py-3">No comments yet. Be the first!</p>
       ) : (
         <div className="space-y-2 max-h-60 overflow-y-auto">
           {comments.map((comment) => (
-            <div key={comment.id} className="p-3 bg-white rounded-lg border border-gray-200">
+            <div key={comment.id} className="p-3 bg-white rounded-lg border border-blue-200">
               <div className="flex justify-between items-start mb-1">
-                <span className="font-semibold text-gray-800 text-sm">{comment.author_name}</span>
-                <span className="text-xs text-gray-500">
+                <span className="font-semibold text-blue-900 text-sm">{comment.author_name}</span>
+                <span className="text-xs text-blue-600">
                   {new Date(comment.created_at).toLocaleDateString()}
                 </span>
               </div>
-              <p className="text-gray-700 text-sm">{comment.comment_text}</p>
+              <p className="text-blue-800 text-sm">{comment.comment_text}</p>
             </div>
           ))}
         </div>
@@ -244,10 +237,10 @@ const AttendanceSection = ({ eventId }) => {
   };
 
   return (
-    <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-      <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+    <div className="mt-4 p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+      <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
         👥 Attendance
-        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-bold">
+        <span className="bg-green-600 text-white px-2 py-1 rounded-full text-xs font-bold">
           {attendanceCount}
         </span>
       </h4>
@@ -258,7 +251,7 @@ const AttendanceSection = ({ eventId }) => {
           placeholder="Your name"
           value={userName}
           onChange={(e) => setUserName(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+          className="w-full px-3 py-2 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm bg-white"
           disabled={loading}
         />
 
@@ -282,7 +275,7 @@ const AttendanceSection = ({ eventId }) => {
 
         {message && (
           <div className={`p-2 rounded-lg text-sm ${
-            message.includes('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+            message.includes('✅') ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-red-100 text-red-700 border border-red-300'
           }`}>
             {message}
           </div>
@@ -291,12 +284,12 @@ const AttendanceSection = ({ eventId }) => {
 
       {attendees.length > 0 && (
         <div className="mt-4">
-          <h5 className="text-sm font-semibold text-gray-700 mb-2">Attendees:</h5>
+          <h5 className="text-sm font-semibold text-green-900 mb-2">Attendees:</h5>
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {attendees.map((attendee) => (
-              <div key={attendee.attendance_id} className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-sm">
-                <span className="text-green-600">✓</span>
-                <span className="font-medium text-gray-800">{attendee.user_name}</span>
+              <div key={attendee.attendance_id} className="flex items-center gap-2 p-2 bg-white rounded border border-green-200 text-sm">
+                <span className="text-green-600 font-bold">✓</span>
+                <span className="font-medium text-green-900">{attendee.user_name}</span>
               </div>
             ))}
           </div>
@@ -429,19 +422,19 @@ const RatingSection = ({ eventId, eventStatus }) => {
   };
 
   return (
-    <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-      <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+    <div className="mt-4 p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg border border-yellow-200">
+      <h4 className="font-semibold text-yellow-900 mb-3 flex items-center gap-2">
         ⭐ Event Rating
       </h4>
 
       {totalRatings > 0 && (
-        <div className="mb-4 p-3 bg-white rounded-lg border border-gray-200">
+        <div className="mb-4 p-3 bg-white rounded-lg border border-yellow-200">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-3xl font-bold text-yellow-600">
                 {averageRating} ⭐
               </div>
-              <div className="text-sm text-gray-600 mt-1">
+              <div className="text-sm text-yellow-700 mt-1">
                 Based on {totalRatings} rating{totalRatings !== 1 ? 's' : ''}
               </div>
             </div>
@@ -453,7 +446,7 @@ const RatingSection = ({ eventId, eventStatus }) => {
       {isEnded ? (
         <div className="space-y-3">
           {hasRated ? (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+            <div className="p-3 bg-green-100 border border-green-300 rounded-lg text-green-800 text-sm font-medium">
               ✅ You rated this event {userRating} star{userRating !== 1 ? 's' : ''}
             </div>
           ) : (
@@ -463,26 +456,26 @@ const RatingSection = ({ eventId, eventStatus }) => {
                 placeholder="Your name"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+                className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm bg-white"
                 disabled={loading}
               />
 
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-600">Your rating:</span>
+              <div className="flex items-center gap-3 p-2 bg-white rounded-lg border border-yellow-200">
+                <span className="text-sm text-yellow-900 font-medium">Your rating:</span>
                 {renderStars(selectedRating, true)}
               </div>
 
               <button
                 onClick={submitRating}
                 disabled={loading || hasRated}
-                className="w-full py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+                className="w-full py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
               >
                 {loading ? 'Submitting...' : 'Submit Rating'}
               </button>
 
               {message && (
                 <div className={`p-2 rounded-lg text-sm ${
-                  message.includes('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                  message.includes('✅') ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-red-100 text-red-700 border border-red-300'
                 }`}>
                   {message}
                 </div>
@@ -491,18 +484,18 @@ const RatingSection = ({ eventId, eventStatus }) => {
           )}
         </div>
       ) : (
-        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm">
+        <div className="p-3 bg-orange-100 border border-orange-300 rounded-lg text-orange-800 text-sm font-medium">
           ℹ️ You can rate this event after it ends
         </div>
       )}
 
       {ratings.length > 0 && (
         <div className="mt-4">
-          <h5 className="text-sm font-semibold text-gray-700 mb-2">Recent Ratings:</h5>
+          <h5 className="text-sm font-semibold text-yellow-900 mb-2">Recent Ratings:</h5>
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {ratings.slice(0, 5).map((r) => (
-              <div key={r.rating_id} className="flex items-center justify-between p-2 bg-white rounded border border-gray-200 text-sm">
-                <span className="font-medium text-gray-800">{r.user_name}</span>
+              <div key={r.rating_id} className="flex items-center justify-between p-2 bg-white rounded border border-yellow-200 text-sm">
+                <span className="font-medium text-yellow-900">{r.user_name}</span>
                 <span className="text-yellow-600">{'⭐'.repeat(r.rating)}</span>
               </div>
             ))}
@@ -611,8 +604,8 @@ const EventsScreen = () => {
     }
   };
 
-  if (loading) return <p className="p-6">Loading events...</p>;
-  if (error) return <p className="p-6">Error: {error}</p>;
+  if (loading) return <p className="p-6 text-center text-gray-600">Loading events...</p>;
+  if (error) return <p className="p-6 text-center text-red-600">Error: {error}</p>;
 
   const displayedEvents = showSaved
     ? events.filter((event) => savedEvents.includes(getEventId(event)))
@@ -642,7 +635,7 @@ const EventsScreen = () => {
         <div className="p-6 pb-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <h2 className="text-3xl font-bold text-gray-800">
-              {showSaved ? "Saved Events" : "Events"}
+              {showSaved ? "❤️ Saved Events" : "📅 Events"}
             </h2>
             <div className="flex flex-col md:flex-row gap-3 md:items-center">
               <input
@@ -700,12 +693,12 @@ const EventsScreen = () => {
                   !showSaved ? "bg-blue-600 text-white shadow-md" : "bg-gray-200 text-gray-800 hover:bg-gray-300"
                 }`}
               >
-                Events
+                All Events
               </button>
               <button
                 onClick={() => setShowSaved(true)}
                 className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  showSaved ? "bg-blue-600 text-white shadow-md" : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                  showSaved ? "bg-red-600 text-white shadow-md" : "bg-gray-200 text-gray-800 hover:bg-gray-300"
                 }`}
               >
                 Saved ({savedEvents.length})
@@ -735,16 +728,21 @@ const EventsScreen = () => {
               return (
                 <div
                   key={eventId}
-                  className="bg-white border rounded-xl p-5 shadow-md transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:border-blue-300"
+                  className="bg-white border rounded-xl p-5 shadow-md transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:border-blue-300 flex flex-col h-full"
                 >
-                  <h3 className="text-xl font-semibold mb-2">
+                  {/* Event Title */}
+                  <h3 className="text-xl font-semibold mb-2 text-gray-800">
                     {event.title || event.event_title || "Untitled Event"}
                   </h3>
-                  <p className="text-gray-700 text-sm mb-2">
-                    {formatDate(event.start_time)}
+
+                  {/* Date and Time */}
+                  <p className="text-gray-600 text-sm mb-2">
+                    📅 {formatDate(event.start_time)}
                     {event.end_time && ` - ${formatDate(event.end_time)}`}
                   </p>
-                  <p className="text-gray-700 text-sm mb-2 flex items-center">
+
+                  {/* Location */}
+                  <p className="text-gray-600 text-sm mb-3 flex items-center">
                     <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -752,73 +750,76 @@ const EventsScreen = () => {
                     {event.location || "No location"}
                   </p>
 
-                  <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${status.color}`}>
+                  {/* Status Badge */}
+                  <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full mb-4 w-fit ${status.color}`}>
                     {status.label}
                   </span>
 
-                  <div className="flex space-x-3 mt-4">
-                    <button
-                      onClick={() => setShowRatingModal(showRatingModal === eventId ? null : eventId)}
-                      className={`flex-1 py-2 rounded-lg transition-all duration-300 ${
-                        status.label === "Ended"
-                          ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      }`}
-                      disabled={status.label !== "Ended"}
-                    >
-                      ⭐ Rate Event
-                    </button>
+                  {/* Action Buttons - Grid Layout */}
+                  <div className="mt-auto space-y-2">
+                    {/* First Row - Full Width Buttons */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setShowRatingModal(showRatingModal === eventId ? null : eventId)}
+                        className={`px-3 py-2 rounded-lg transition-all duration-300 font-medium text-sm whitespace-nowrap ${
+                          status.label === "Ended"
+                            ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300"
+                            : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                        }`}
+                        disabled={status.label !== "Ended"}
+                        title={status.label !== "Ended" ? "Available after event ends" : "Click to rate"}
+                      >
+                        ⭐ Rate
+                      </button>
 
-                    {!showSaved && (
-                      <>
-                        <button
-                          className="flex-1 py-2 rounded-lg transition-all duration-300 bg-gray-100 text-gray-700 hover:bg-green-50"
-                          onClick={() => setExpandedEventId(expandedEventId === eventId ? null : eventId)}
-                        >
-                          {expandedEventId === eventId ? 'Hide' : '💬 Comments'}
-                        </button>
+                      {!showSaved && (
+                        <>
+                          <button
+                            className="px-3 py-2 rounded-lg transition-all duration-300 bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium text-sm border border-blue-200"
+                            onClick={() => setExpandedEventId(expandedEventId === eventId ? null : eventId)}
+                            title="View comments and attendance"
+                          >
+                            💬 Info
+                          </button>
 
-                        {/* NEW: Share Button */}
-                        <ShareButton event={event} eventId={eventId} />
+                          <ShareButton event={event} eventId={eventId} />
 
+                          <button
+                            onClick={() => toggleSave(event)}
+                            className={`px-3 py-2 rounded-lg transition-all duration-300 font-medium text-sm border ${
+                              savedEvents.includes(eventId)
+                                ? "bg-red-100 text-red-700 border-red-300 hover:bg-red-200"
+                                : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                            }`}
+                            title={savedEvents.includes(eventId) ? "Click to remove" : "Click to save"}
+                          >
+                            ❤️ {savedEvents.includes(eventId) ? "Saved" : "Save"}
+                          </button>
+                        </>
+                      )}
+
+                      {showSaved && (
                         <button
                           onClick={() => toggleSave(event)}
-                          className={`flex-1 py-2 rounded-lg transition-all duration-300 ${
-                            savedEvents.includes(eventId)
-                              ? "bg-red-100 text-red-700"
-                              : "bg-gray-100 text-gray-700 hover:bg-red-50"
-                          }`}
+                          className="px-3 py-2 rounded-lg transition-all duration-300 bg-red-100 text-red-700 hover:bg-red-200 font-medium text-sm border border-red-300"
+                          title="Remove from saved"
                         >
-                          ❤️ {savedEvents.includes(eventId) ? "Saved" : "Save"}
+                          🗑️ Remove
                         </button>
-                      </>
-                    )}
-
-                    {showSaved && (
-                      <button
-                        onClick={() => toggleSave(event)}
-                        className="flex-1 py-2 rounded-lg transition-all duration-300 bg-red-100 text-red-700 hover:bg-red-200"
-                      >
-                        🗑️ Remove
-                      </button>
-                    )}
+                      )}
+                    </div>
                   </div>
 
-                  {/* Rating Modal/Section - Shows when Rate Event is clicked */}
+                  {/* Expandable Sections */}
                   {showRatingModal === eventId && (
                     <RatingSection eventId={eventId} eventStatus={status.label} />
                   )}
                   
-                  {/* Attendance Section */}
                   {expandedEventId === eventId && (
-                    <div className="mt-4">
+                    <>
                       <AttendanceSection eventId={eventId} />
-                    </div>
-                  )}
-                  
-                  {/* Comments Section */}
-                  {expandedEventId === eventId && (
-                    <CommentSection eventId={eventId} />
+                      <CommentSection eventId={eventId} />
+                    </>
                   )}
                 </div>
               );
