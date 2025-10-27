@@ -1,6 +1,50 @@
 import React, { useState, useEffect } from "react";
 import Cookies from 'js-cookie';
 
+// ShareButton Component
+const ShareButton = ({ event, eventId }) => {
+  const [showNotification, setShowNotification] = useState(false);
+
+  const handleShare = async () => {
+    // Create a shareable link with event details
+    const shareLink = `${window.location.origin}?eventId=${eventId}&eventTitle=${encodeURIComponent(
+      event.title || event.event_title
+    )}&location=${encodeURIComponent(event.location || 'No location')}`;
+
+    try {
+      // Copy to clipboard
+      await navigator.clipboard.writeText(shareLink);
+      
+      // Show notification
+      setShowNotification(true);
+      
+      // Hide notification after 2 seconds
+      setTimeout(() => setShowNotification(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      alert('Failed to copy link to clipboard');
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={handleShare}
+        className="flex-1 py-2 rounded-lg transition-all duration-300 bg-gray-100 text-gray-700 hover:bg-blue-50"
+      >
+        🔗 Share
+      </button>
+      
+      {/* Notification popup */}
+      {showNotification && (
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-green-600 text-white text-sm rounded-lg whitespace-nowrap shadow-lg z-50">
+          ✅ Link copied!
+        </div>
+      )}
+    </div>
+  );
+};
+
 // CommentSection Component
 const CommentSection = ({ eventId }) => {
   const [comments, setComments] = useState([]);
@@ -733,6 +777,10 @@ const EventsScreen = () => {
                         >
                           {expandedEventId === eventId ? 'Hide' : '💬 Comments'}
                         </button>
+
+                        {/* NEW: Share Button */}
+                        <ShareButton event={event} eventId={eventId} />
+
                         <button
                           onClick={() => toggleSave(event)}
                           className={`flex-1 py-2 rounded-lg transition-all duration-300 ${
