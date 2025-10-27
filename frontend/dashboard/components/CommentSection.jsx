@@ -5,6 +5,7 @@ const CommentSection = ({ eventId }) => {
   const [authorName, setAuthorName] = useState('');
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     fetchComments();
@@ -20,111 +21,112 @@ const CommentSection = ({ eventId }) => {
     }
   };
 
-  const handleAddComment = async (e) => {
-    e.preventDefault();
-    
+  const addComment = async () => {
     if (!authorName.trim() || !commentText.trim()) {
       alert('Please fill in all fields');
       return;
     }
-
+    
     setLoading(true);
     try {
       const response = await fetch(`http://localhost:3000/api/events/${eventId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ authorName, commentText }),
+        body: JSON.stringify({ authorName: authorName.trim(), commentText: commentText.trim() })
       });
 
       if (response.ok) {
         setAuthorName('');
         setCommentText('');
         fetchComments();
+      } else {
+        alert('Failed to add comment');
       }
     } catch (error) {
       console.error('Error adding comment:', error);
-      alert('Failed to add comment');
+      alert('Error adding comment');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteComment = async (commentId) => {
-    if (!confirm('Delete this comment?')) return;
+  const deleteComment = async (commentId) => {
+    if (!window.confirm('Are you sure you want to delete this comment?')) return;
 
+    setDeletingId(commentId);
     try {
       const response = await fetch(`http://localhost:3000/api/comments/${commentId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (response.ok) {
         fetchComments();
+      } else {
+        alert('Failed to delete comment');
       }
     } catch (error) {
       console.error('Error deleting comment:', error);
+      alert('Error deleting comment');
+    } finally {
+      setDeletingId(null);
     }
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   return (
-    <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-      <h4 className="text-lg font-semibold text-gray-800 mb-3">
-        💬 Comments ({comments.length})
-      </h4>
+    <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+      <h4 className="font-semibold text-blue-900 mb-3">💬 Comments ({comments.length})</h4>
       
-      <form onSubmit={handleAddComment} className="mb-4 space-y-2">
+      <div className="space-y-2 mb-3">
         <input
           type="text"
           placeholder="Your name"
           value={authorName}
           onChange={(e) => setAuthorName(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+          className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
         />
         <textarea
           placeholder="Add your comment..."
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
-          rows="2"
+          className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+          rows="3"
         />
-        <button 
-          type="submit" 
+        <button
+          onClick={addComment}
           disabled={loading}
-          className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors text-sm font-medium"
+          className="w-full py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all disabled:bg-gray-400 text-sm"
         >
-          {loading ? 'Adding...' : 'Add Comment'}
+          {loading ? 'Adding...' : '📝 Add Comment'}
         </button>
-      </form>
+      </div>
 
-      <div className="space-y-3 max-h-64 overflow-y-auto">
-        {comments.length === 0 ? (
-          <p className="text-center text-gray-500 text-sm py-4">No comments yet. Be the first!</p>
-        ) : (
-          comments.map((comment) => (
-            <div key={comment.id} className="bg-white p-3 rounded-lg border border-gray-200">
+      {comments.length === 0 ? (
+        <p className="text-blue-700 text-sm text-center py-3">No comments yet. Be the first!</p>
+      ) : (
+        <div className="space-y-2 max-h-60 overflow-y-auto">
+          {comments.map((comment) => (
+            <div key={comment.id} className="p-3 bg-white rounded-lg border border-blue-200">
               <div className="flex justify-between items-start mb-1">
-                <span className="font-semibold text-gray-800 text-sm">{comment.author_name}</span>
-                <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
+                <span className="font-semibold text-blue-900 text-sm">{comment.author_name}</span>
+                <span className="text-xs text-blue-600">
+                  {new Date(comment.created_at).toLocaleDateString()}
+                </span>
               </div>
-              <p className="text-gray-700 text-sm mb-2">{comment.comment_text}</p>
+              <p className="text-blue-800 text-sm mb-2">{comment.comment_text}</p>
+              
+              {/* DELETE BUTTON */}
               <button
-                onClick={() => handleDeleteComment(comment.id)}
-                className="text-xs text-red-600 hover:text-red-800 font-medium"
+                onClick={() => deleteComment(comment.id)}
+                disabled={deletingId === comment.id}
+                className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded font-medium transition-colors disabled:opacity-50"
               >
-                🗑️ Delete
+                {deletingId === comment.id ? '⏳ Deleting...' : '🗑️ Delete'}
               </button>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

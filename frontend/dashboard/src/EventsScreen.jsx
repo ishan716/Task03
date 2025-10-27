@@ -38,12 +38,13 @@ const ShareButton = ({ event, eventId }) => {
   );
 };
 
-// CommentSection Component
+// CommentSection Component WITH DELETE FUNCTIONALITY
 const CommentSection = ({ eventId }) => {
   const [comments, setComments] = useState([]);
   const [authorName, setAuthorName] = useState('');
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     fetchComments();
@@ -60,7 +61,10 @@ const CommentSection = ({ eventId }) => {
   };
 
   const addComment = async () => {
-    if (!authorName.trim() || !commentText.trim()) return;
+    if (!authorName.trim() || !commentText.trim()) {
+      alert('Please fill in all fields');
+      return;
+    }
     
     setLoading(true);
     try {
@@ -74,11 +78,37 @@ const CommentSection = ({ eventId }) => {
         setAuthorName('');
         setCommentText('');
         fetchComments();
+      } else {
+        alert('Failed to add comment');
       }
     } catch (error) {
       console.error('Error adding comment:', error);
+      alert('Error adding comment');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteComment = async (commentId) => {
+    if (!window.confirm('Are you sure you want to delete this comment?')) return;
+
+    setDeletingId(commentId);
+    try {
+      const response = await fetch(`http://localhost:3000/api/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        fetchComments();
+      } else {
+        alert('Failed to delete comment');
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      alert('Error deleting comment');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -122,7 +152,16 @@ const CommentSection = ({ eventId }) => {
                   {new Date(comment.created_at).toLocaleDateString()}
                 </span>
               </div>
-              <p className="text-blue-800 text-sm">{comment.comment_text}</p>
+              <p className="text-blue-800 text-sm mb-2">{comment.comment_text}</p>
+              
+              {/* DELETE BUTTON */}
+              <button
+                onClick={() => deleteComment(comment.id)}
+                disabled={deletingId === comment.id}
+                className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded font-medium transition-colors disabled:opacity-50"
+              >
+                {deletingId === comment.id ? '⏳ Deleting...' : '🗑️ Delete'}
+              </button>
             </div>
           ))}
         </div>
