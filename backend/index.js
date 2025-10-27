@@ -148,12 +148,12 @@
 
 
 // backend/index.js
-const express = require('express');
-const cors = require('cors');
-const supabase = require('./db');
+const express = require('express');               // framework for creating server
+const cors = require('cors');                     // middleware for handling CORS
+const supabase = require('./db');                 //database services
 const swaggerUi = require('swagger-ui-express');
-const swaggerJsdoc = require('swagger-jsdoc');
-const fs = require('fs');
+const swaggerJsdoc = require('swagger-jsdoc');    // swagger modules
+const fs = require('fs');                         // node js modules
 const path = require('path');
 
 const app = express();
