@@ -1,0 +1,23 @@
+[
+  {
+    "rating_id": 1698334920000,
+    "event_id": 15,
+    "user_name": "Prabash",
+    "rating": 5,
+    "created_at": "2025-10-27T12:02:00Z"
+  },
+  {
+    "rating_id": 1698334980000,
+    "event_id": 1,
+    "user_name": "Samadhi",
+    "rating": 4,
+    "created_at": "2025-10-27T12:03:00Z"
+  },
+  {
+    "rating_id": 1761583201783,
+    "event_id": 1,
+    "user_name": "uuu",
+    "rating": 5,
+    "created_at": "2025-10-27T16:40:01.783Z"
+  }
+]
