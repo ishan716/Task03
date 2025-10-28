@@ -1,18 +1,39 @@
-import React, { useState, useEffect } from "react";
-import Cookies from 'js-cookie';
+// ============================================================================
+// IMPORTS & DEPENDENCIES
+// ============================================================================
 
-// ShareButton Component
+import React, { useState, useEffect } from "react";
+import Cookies from 'js-cookie';  // Cookie management library
+
+// ============================================================================
+// SHAREBUTTON COMPONENT
+// ============================================================================
+// Allows users to copy event share links to clipboard with visual feedback
+
+/**
+ * ShareButton Component
+ * Generates shareable URL with event details and copies to clipboard
+ * @param {Object} event - Event data object containing title and location
+ * @param {string} eventId - Unique event identifier
+ */
 const ShareButton = ({ event, eventId }) => {
   const [showNotification, setShowNotification] = useState(false);
 
+  /**
+   * Handles share link generation and clipboard copy operation
+   * Constructs URL with event parameters and provides user feedback
+   */
   const handleShare = async () => {
+    // Construct shareable link with event details as URL parameters
     const shareLink = `${window.location.origin}?eventId=${eventId}&eventTitle=${encodeURIComponent(
       event.title || event.event_title
     )}&location=${encodeURIComponent(event.location || 'No location')}`;
 
     try {
+      // Copy link to clipboard
       await navigator.clipboard.writeText(shareLink);
       setShowNotification(true);
+      // Hide notification after 2 seconds
       setTimeout(() => setShowNotification(false), 2000);
     } catch (err) {
       console.error('Failed to copy link:', err);
@@ -29,6 +50,7 @@ const ShareButton = ({ event, eventId }) => {
         🔗 Share
       </button>
       
+      {/* Success notification - appears briefly after copying */}
       {showNotification && (
         <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-green-600 text-white text-sm rounded-lg whitespace-nowrap shadow-lg z-50">
           ✅ Link copied!
@@ -38,18 +60,35 @@ const ShareButton = ({ event, eventId }) => {
   );
 };
 
-// CommentSection Component WITH DELETE FUNCTIONALITY
-const CommentSection = ({ eventId }) => {
-  const [comments, setComments] = useState([]);
-  const [authorName, setAuthorName] = useState('');
-  const [commentText, setCommentText] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
+// ============================================================================
+// COMMENTSECTION COMPONENT
+// ============================================================================
+// Manages event comments with create and delete functionality
 
+/**
+ * CommentSection Component
+ * Displays comments for an event and allows users to add/delete comments
+ * Fetches data from backend API
+ * @param {string} eventId - Event identifier for API calls
+ */
+const CommentSection = ({ eventId }) => {
+  // State management
+  const [comments, setComments] = useState([]);           // All comments for this event
+  const [authorName, setAuthorName] = useState('');       // Current user's name
+  const [commentText, setCommentText] = useState('');     // Current comment text
+  const [loading, setLoading] = useState(false);          // Loading state for add operation
+  const [deletingId, setDeletingId] = useState(null);     // ID of comment being deleted
+
+  /**
+   * Fetch comments on component mount
+   */
   useEffect(() => {
     fetchComments();
   }, [eventId]);
 
+  /**
+   * Retrieves all comments for the event from backend API
+   */
   const fetchComments = async () => {
     try {
       const response = await fetch(`http://localhost:3000/api/events/${eventId}/comments`);
@@ -60,7 +99,12 @@ const CommentSection = ({ eventId }) => {
     }
   };
 
+  /**
+   * Submits a new comment to the backend
+   * Validates input fields before submission
+   */
   const addComment = async () => {
+    // Validate both fields are filled
     if (!authorName.trim() || !commentText.trim()) {
       alert('Please fill in all fields');
       return;
@@ -68,15 +112,21 @@ const CommentSection = ({ eventId }) => {
     
     setLoading(true);
     try {
+      // Send POST request to create comment
       const response = await fetch(`http://localhost:3000/api/events/${eventId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ authorName: authorName.trim(), commentText: commentText.trim() })
+        body: JSON.stringify({ 
+          authorName: authorName.trim(), 
+          commentText: commentText.trim() 
+        })
       });
 
       if (response.ok) {
+        // Clear form on success
         setAuthorName('');
         setCommentText('');
+        // Refresh comments list
         fetchComments();
       } else {
         alert('Failed to add comment');
@@ -89,17 +139,24 @@ const CommentSection = ({ eventId }) => {
     }
   };
 
+  /**
+   * Deletes a comment after user confirmation
+   * @param {string} commentId - ID of comment to delete
+   */
   const deleteComment = async (commentId) => {
+    // Confirm deletion with user
     if (!window.confirm('Are you sure you want to delete this comment?')) return;
 
     setDeletingId(commentId);
     try {
+      // Send DELETE request
       const response = await fetch(`http://localhost:3000/api/comments/${commentId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       });
 
       if (response.ok) {
+        // Refresh comments list after successful deletion
         fetchComments();
       } else {
         alert('Failed to delete comment');
@@ -116,6 +173,7 @@ const CommentSection = ({ eventId }) => {
     <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
       <h4 className="font-semibold text-blue-900 mb-3">💬 Comments ({comments.length})</h4>
       
+      {/* Comment input form */}
       <div className="space-y-2 mb-3">
         <input
           type="text"
@@ -140,6 +198,7 @@ const CommentSection = ({ eventId }) => {
         </button>
       </div>
 
+      {/* Display comments or empty state */}
       {comments.length === 0 ? (
         <p className="text-blue-700 text-sm text-center py-3">No comments yet. Be the first!</p>
       ) : (
@@ -154,7 +213,7 @@ const CommentSection = ({ eventId }) => {
               </div>
               <p className="text-blue-800 text-sm mb-2">{comment.comment_text}</p>
               
-              {/* DELETE BUTTON */}
+              {/* Delete button for individual comments */}
               <button
                 onClick={() => deleteComment(comment.id)}
                 disabled={deletingId === comment.id}
@@ -170,25 +229,45 @@ const CommentSection = ({ eventId }) => {
   );
 };
 
-// AttendanceSection Component
-const AttendanceSection = ({ eventId }) => {
-  const [attendanceCount, setAttendanceCount] = useState(0);
-  const [attendees, setAttendees] = useState([]);
-  const [userName, setUserName] = useState('');
-  const [isAttending, setIsAttending] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+// ============================================================================
+// ATTENDANCESECTION COMPONENT
+// ============================================================================
+// Manages event attendance tracking with add and remove functionality
 
+/**
+ * AttendanceSection Component
+ * Displays event attendance and allows users to mark themselves as attending
+ * Manages attendance count and attendee list
+ * @param {string} eventId - Event identifier for API calls
+ */
+const AttendanceSection = ({ eventId }) => {
+  // State management
+  const [attendanceCount, setAttendanceCount] = useState(0);   // Total attendees
+  const [attendees, setAttendees] = useState([]);              // List of attendees
+  const [userName, setUserName] = useState('');                // Current user's name
+  const [isAttending, setIsAttending] = useState(false);       // Is user already attending?
+  const [loading, setLoading] = useState(false);               // Loading state for operations
+  const [message, setMessage] = useState('');                  // Feedback message
+
+  /**
+   * Fetch attendance data on component mount
+   */
   useEffect(() => {
     fetchAttendance();
   }, [eventId]);
 
+  /**
+   * Check attendance status when user name changes
+   */
   useEffect(() => {
     if (userName.trim()) {
       checkAttendance();
     }
   }, [userName]);
 
+  /**
+   * Fetches attendance count and attendees list from backend
+   */
   const fetchAttendance = async () => {
     try {
       const response = await fetch(`http://localhost:3000/api/events/${eventId}/attendance`);
@@ -200,6 +279,9 @@ const AttendanceSection = ({ eventId }) => {
     }
   };
 
+  /**
+   * Checks if the current user is already marked as attending
+   */
   const checkAttendance = async () => {
     try {
       const response = await fetch(
@@ -212,7 +294,12 @@ const AttendanceSection = ({ eventId }) => {
     }
   };
 
+  /**
+   * Marks the current user as attending the event
+   * Validates user input before submission
+   */
   const markAttendance = async () => {
+    // Validate user name input
     if (!userName.trim()) {
       setMessage('⚠️ Please enter your name');
       return;
@@ -222,6 +309,7 @@ const AttendanceSection = ({ eventId }) => {
     setMessage('');
 
     try {
+      // Send POST request to mark attendance
       const response = await fetch(
         `http://localhost:3000/api/events/${eventId}/attend`,
         {
@@ -236,7 +324,7 @@ const AttendanceSection = ({ eventId }) => {
       if (response.ok) {
         setMessage('✅ Marked as attending!');
         setIsAttending(true);
-        fetchAttendance();
+        fetchAttendance(); // Refresh list
       } else {
         setMessage(`❌ ${data.error}`);
       }
@@ -248,11 +336,15 @@ const AttendanceSection = ({ eventId }) => {
     }
   };
 
+  /**
+   * Removes the current user from event attendance
+   */
   const removeAttendance = async () => {
     setLoading(true);
     setMessage('');
 
     try {
+      // Send DELETE request to remove attendance
       const response = await fetch(
         `http://localhost:3000/api/events/${eventId}/attend`,
         {
@@ -265,7 +357,7 @@ const AttendanceSection = ({ eventId }) => {
       if (response.ok) {
         setMessage('✅ Attendance removed');
         setIsAttending(false);
-        fetchAttendance();
+        fetchAttendance(); // Refresh list
       }
     } catch (error) {
       setMessage('❌ Error removing attendance');
@@ -284,6 +376,7 @@ const AttendanceSection = ({ eventId }) => {
         </span>
       </h4>
 
+      {/* Attendance input and action buttons */}
       <div className="space-y-3">
         <input
           type="text"
@@ -294,6 +387,7 @@ const AttendanceSection = ({ eventId }) => {
           disabled={loading}
         />
 
+        {/* Show appropriate button based on attendance status */}
         {!isAttending ? (
           <button
             onClick={markAttendance}
@@ -312,6 +406,7 @@ const AttendanceSection = ({ eventId }) => {
           </button>
         )}
 
+        {/* Feedback message for user actions */}
         {message && (
           <div className={`p-2 rounded-lg text-sm ${
             message.includes('✅') ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-red-100 text-red-700 border border-red-300'
@@ -321,6 +416,7 @@ const AttendanceSection = ({ eventId }) => {
         )}
       </div>
 
+      {/* Display list of attendees */}
       {attendees.length > 0 && (
         <div className="mt-4">
           <h5 className="text-sm font-semibold text-green-900 mb-2">Attendees:</h5>
@@ -338,29 +434,50 @@ const AttendanceSection = ({ eventId }) => {
   );
 };
 
-// RatingSection Component
-const RatingSection = ({ eventId, eventStatus }) => {
-  const [ratings, setRatings] = useState([]);
-  const [averageRating, setAverageRating] = useState(0);
-  const [totalRatings, setTotalRatings] = useState(0);
-  const [userName, setUserName] = useState('');
-  const [selectedRating, setSelectedRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [hasRated, setHasRated] = useState(false);
-  const [userRating, setUserRating] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+// ============================================================================
+// RATINGSECTION COMPONENT
+// ============================================================================
+// Handles event rating submission and display
 
+/**
+ * RatingSection Component
+ * Allows users to rate events (only after event has ended)
+ * Displays average rating and individual user ratings
+ * @param {string} eventId - Event identifier for API calls
+ * @param {string} eventStatus - Current status of event (Ended, Up Coming, On Going)
+ */
+const RatingSection = ({ eventId, eventStatus }) => {
+  // State management
+  const [ratings, setRatings] = useState([]);            // All ratings for event
+  const [averageRating, setAverageRating] = useState(0); // Average rating score
+  const [totalRatings, setTotalRatings] = useState(0);   // Total number of ratings
+  const [userName, setUserName] = useState('');          // Current user's name
+  const [selectedRating, setSelectedRating] = useState(0);     // Current rating selection (1-5)
+  const [hoverRating, setHoverRating] = useState(0);           // Rating on hover
+  const [hasRated, setHasRated] = useState(false);             // Has user already rated?
+  const [userRating, setUserRating] = useState(null);          // User's existing rating
+  const [loading, setLoading] = useState(false);               // Loading state
+  const [message, setMessage] = useState('');                  // Feedback message
+
+  /**
+   * Fetch ratings on component mount
+   */
   useEffect(() => {
     fetchRatings();
   }, [eventId]);
 
+  /**
+   * Check user's existing rating when name changes
+   */
   useEffect(() => {
     if (userName.trim()) {
       checkUserRating();
     }
   }, [userName]);
 
+  /**
+   * Fetches all ratings and calculates average from backend
+   */
   const fetchRatings = async () => {
     try {
       const response = await fetch(`http://localhost:3000/api/events/${eventId}/rating`);
@@ -374,6 +491,9 @@ const RatingSection = ({ eventId, eventStatus }) => {
     }
   };
 
+  /**
+   * Checks if current user has already rated this event
+   */
   const checkUserRating = async () => {
     try {
       const response = await fetch(
@@ -383,6 +503,7 @@ const RatingSection = ({ eventId, eventStatus }) => {
       
       setHasRated(data.hasRated);
       setUserRating(data.userRating);
+      // Pre-fill stars if user already rated
       if (data.hasRated) {
         setSelectedRating(data.userRating);
       }
@@ -391,12 +512,17 @@ const RatingSection = ({ eventId, eventStatus }) => {
     }
   };
 
+  /**
+   * Submits rating to backend after validation
+   */
   const submitRating = async () => {
+    // Validate user name
     if (!userName.trim()) {
       setMessage('⚠️ Please enter your name');
       return;
     }
     
+    // Validate rating selection
     if (selectedRating === 0) {
       setMessage('⚠️ Please select a rating');
       return;
@@ -406,6 +532,7 @@ const RatingSection = ({ eventId, eventStatus }) => {
     setMessage('');
 
     try {
+      // Send POST request to submit rating
       const response = await fetch(
         `http://localhost:3000/api/events/${eventId}/rating`,
         {
@@ -424,7 +551,7 @@ const RatingSection = ({ eventId, eventStatus }) => {
         setMessage('✅ Rating submitted successfully!');
         setHasRated(true);
         setUserRating(selectedRating);
-        fetchRatings();
+        fetchRatings(); // Refresh ratings list
       } else {
         setMessage(`❌ ${data.error}`);
       }
@@ -436,8 +563,15 @@ const RatingSection = ({ eventId, eventStatus }) => {
     }
   };
 
+  // Determine if event has ended
   const isEnded = eventStatus === "Ended";
 
+  /**
+   * Renders interactive or static star rating display
+   * @param {number} rating - Current rating value
+   * @param {boolean} isInteractive - Whether stars are clickable
+   * @returns {JSX} Star rating component
+   */
   const renderStars = (rating, isInteractive = false) => {
     return (
       <div className="flex gap-1">
@@ -466,6 +600,7 @@ const RatingSection = ({ eventId, eventStatus }) => {
         ⭐ Event Rating
       </h4>
 
+      {/* Display average rating if event has ratings */}
       {totalRatings > 0 && (
         <div className="mb-4 p-3 bg-white rounded-lg border border-yellow-200">
           <div className="flex items-center justify-between">
@@ -482,6 +617,7 @@ const RatingSection = ({ eventId, eventStatus }) => {
         </div>
       )}
 
+      {/* Rating input section - only available after event ends */}
       {isEnded ? (
         <div className="space-y-3">
           {hasRated ? (
@@ -499,6 +635,7 @@ const RatingSection = ({ eventId, eventStatus }) => {
                 disabled={loading}
               />
 
+              {/* Interactive star rating */}
               <div className="flex items-center gap-3 p-2 bg-white rounded-lg border border-yellow-200">
                 <span className="text-sm text-yellow-900 font-medium">Your rating:</span>
                 {renderStars(selectedRating, true)}
@@ -512,6 +649,7 @@ const RatingSection = ({ eventId, eventStatus }) => {
                 {loading ? 'Submitting...' : 'Submit Rating'}
               </button>
 
+              {/* Feedback message for rating submission */}
               {message && (
                 <div className={`p-2 rounded-lg text-sm ${
                   message.includes('✅') ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-red-100 text-red-700 border border-red-300'
@@ -523,11 +661,13 @@ const RatingSection = ({ eventId, eventStatus }) => {
           )}
         </div>
       ) : (
+        // Show message if event hasn't ended yet
         <div className="p-3 bg-orange-100 border border-orange-300 rounded-lg text-orange-800 text-sm font-medium">
           ℹ️ You can rate this event after it ends
         </div>
       )}
 
+      {/* Display recent ratings from other users */}
       {ratings.length > 0 && (
         <div className="mt-4">
           <h5 className="text-sm font-semibold text-yellow-900 mb-2">Recent Ratings:</h5>
@@ -545,22 +685,36 @@ const RatingSection = ({ eventId, eventStatus }) => {
   );
 };
 
-// Main EventsScreen Component
-const EventsScreen = () => {
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [savedEvents, setSavedEvents] = useState([]);
-  const [showSaved, setShowSaved] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [expandedEventId, setExpandedEventId] = useState(null);
-  const [showRatingModal, setShowRatingModal] = useState(null);
+// ============================================================================
+// EVENTSSCREEN COMPONENT (MAIN)
+// ============================================================================
+// Main component that displays events list with filtering, searching, and saving
 
+/**
+ * EventsScreen Component
+ * Displays list of events with filtering, searching, and saving capabilities
+ * Integrates all sub-components for comments, attendance, and ratings
+ */
+const EventsScreen = () => {
+  // State management
+  const [events, setEvents] = useState([]);                    // All events from API
+  const [loading, setLoading] = useState(true);                // Initial data loading
+  const [error, setError] = useState(null);                    // Error messages
+  const [savedEvents, setSavedEvents] = useState([]);          // Saved event IDs
+  const [showSaved, setShowSaved] = useState(false);           // Toggle saved view
+  const [searchTerm, setSearchTerm] = useState("");             // Search filter
+  const [selectedCategories, setSelectedCategories] = useState([]); // Category filters
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false); // Dropdown toggle
+  const [expandedEventId, setExpandedEventId] = useState(null); // Expanded event for details
+  const [showRatingModal, setShowRatingModal] = useState(null); // Expanded rating section
+
+  /**
+   * Load saved events from browser cookies on component mount
+   */
   useEffect(() => {
     const loadSavedEventsFromCookies = () => {
       try {
+        // Retrieve saved events from cookies
         const savedEventsCookie = Cookies.get('savedEvents');
         if (savedEventsCookie) {
           const parsedSavedEvents = JSON.parse(savedEventsCookie);
@@ -568,18 +722,26 @@ const EventsScreen = () => {
         }
       } catch (error) {
         console.error('Error loading events from cookies:', error);
+        // Remove corrupted cookie
         Cookies.remove('savedEvents');
       }
     };
     loadSavedEventsFromCookies();
   }, []);
 
+  /**
+   * Extract unique categories from all events
+   */
   const categories = Array.from(
     new Set(
       events.flatMap(e => (e.categories || []).map(c => c.category_name)).filter(Boolean)
     )
   );
 
+  /**
+   * Persist saved events to cookies whenever they change
+   * Cookies expire after 30 days
+   */
   useEffect(() => {
     if (savedEvents.length > 0) {
       Cookies.set('savedEvents', JSON.stringify(savedEvents), { expires: 30 });
@@ -588,6 +750,9 @@ const EventsScreen = () => {
     }
   }, [savedEvents]);
 
+  /**
+   * Fetch all events from backend API on component mount
+   */
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -606,8 +771,19 @@ const EventsScreen = () => {
     fetchEvents();
   }, []);
 
+  /**
+   * Safely retrieves event ID from event object
+   * Handles both 'id' and 'event_id' property names
+   * @param {Object} event - Event data object
+   * @returns {string} Event ID
+   */
   const getEventId = (event) => event.id || event.event_id;
 
+  /**
+   * Toggles event save/unsave status
+   * Updates state and persists to cookies
+   * @param {Object} event - Event to toggle
+   */
   const toggleSave = (event) => {
     const eventId = getEventId(event);
     setSavedEvents((prev) => {
@@ -618,6 +794,12 @@ const EventsScreen = () => {
     });
   };
 
+  /**
+   * Formats date string to locale-specific readable format
+   * Includes date, month, year, hour, and minute
+   * @param {string} dateString - ISO date string
+   * @returns {string} Formatted date and time (e.g., "January 28, 2025, 02:30 PM")
+   */
   const formatDate = (dateString) => {
     if (!dateString) return "";
     return new Date(dateString).toLocaleString("en-US", {
@@ -629,6 +811,14 @@ const EventsScreen = () => {
     });
   };
 
+  /**
+   * Determines event status based on current time and event dates
+   * Compares current time with start_time and end_time
+   * @param {string} start - Event start time (ISO format)
+   * @param {string} end - Event end time (ISO format)
+   * @returns {Object} Status object with label and color classes
+   * Status types: "On Going" (green), "Up Coming" (yellow), "Ended" (red)
+   */
   const getEventStatus = (start, end) => {
     const now = new Date();
     const startDate = new Date(start);
@@ -643,21 +833,29 @@ const EventsScreen = () => {
     }
   };
 
+  // Show loading state
   if (loading) return <p className="p-6 text-center text-gray-600">Loading events...</p>;
+  
+  // Show error state
   if (error) return <p className="p-6 text-center text-red-600">Error: {error}</p>;
 
+  // Filter events based on saved/all toggle
   const displayedEvents = showSaved
     ? events.filter((event) => savedEvents.includes(getEventId(event)))
     : events;
 
+  // Apply search and category filters
   let filteredEvents = displayedEvents.filter(event => {
+    // Search by event title
     const matchesSearch = searchTerm === "" || (event.title || event.event_title || "").toLowerCase().includes(searchTerm.toLowerCase());
+    // Filter by selected categories
     const matchesCategory =
       selectedCategories.length === 0 ||
       (event.categories || []).some(c => selectedCategories.includes(c.category_name));
     return matchesSearch && matchesCategory;
   });
 
+  // Sort events by status priority, then by date
   const statusOrder = { "On Going": 0, "Up Coming": 1, "Ended": 2 };
   filteredEvents = filteredEvents.sort((a, b) => {
     const statusA = getEventStatus(a.start_time, a.end_time).label;
@@ -670,13 +868,20 @@ const EventsScreen = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen">
+      {/* ================================================================ */}
+      {/* STICKY HEADER - Search, Filter, and Toggle Controls             */}
+      {/* ================================================================ */}
       <div className="sticky top-0 z-10 bg-white shadow-md border-b border-gray-200">
         <div className="p-6 pb-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {/* Header Title */}
             <h2 className="text-3xl font-bold text-gray-800">
               {showSaved ? "❤️ Saved Events" : "📅 Events"}
             </h2>
+            
+            {/* Search, Filter, and Toggle Controls */}
             <div className="flex flex-col md:flex-row gap-3 md:items-center">
+              {/* Search input field */}
               <input
                 type="text"
                 value={searchTerm}
@@ -684,6 +889,8 @@ const EventsScreen = () => {
                 placeholder="Search events..."
                 className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800"
               />
+              
+              {/* Category filter dropdown */}
               <div className="relative">
                 <button
                   type="button"
@@ -693,6 +900,8 @@ const EventsScreen = () => {
                   {selectedCategories.length > 0 ? `${selectedCategories.join(", ")}` : "Categories"}
                   <span className="ml-2">▼</span>
                 </button>
+                
+                {/* Dropdown menu for categories */}
                 {showCategoryDropdown && (
                   <div className="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-2">
                     {categories.map((cat) => (
@@ -715,6 +924,8 @@ const EventsScreen = () => {
                         <span className={selectedCategories.includes(cat) ? "font-bold text-blue-700" : "text-gray-800"}>{cat}</span>
                       </label>
                     ))}
+                    
+                    {/* Close dropdown button */}
                     <div className="flex justify-end mt-2">
                       <button
                         className="px-3 py-1 rounded bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-all duration-150"
@@ -726,6 +937,8 @@ const EventsScreen = () => {
                   </div>
                 )}
               </div>
+              
+              {/* All Events toggle button */}
               <button
                 onClick={() => setShowSaved(false)}
                 className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
@@ -734,6 +947,8 @@ const EventsScreen = () => {
               >
                 All Events
               </button>
+              
+              {/* Saved Events toggle button */}
               <button
                 onClick={() => setShowSaved(true)}
                 className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
@@ -747,7 +962,11 @@ const EventsScreen = () => {
         </div>
       </div>
 
+      {/* ================================================================ */}
+      {/* EVENTS GRID - Main Content Area                                  */}
+      {/* ================================================================ */}
       <div className="p-6 pt-4">
+        {/* Empty state message */}
         {filteredEvents.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-600 text-lg">
@@ -759,6 +978,7 @@ const EventsScreen = () => {
             </p>
           </div>
         ) : (
+          // Events grid
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredEvents.map((event) => {
               const eventId = getEventId(event);
@@ -796,7 +1016,7 @@ const EventsScreen = () => {
 
                   {/* Action Buttons - Grid Layout */}
                   <div className="mt-auto space-y-2">
-                    {/* First Row - Full Width Buttons */}
+                    {/* First Row - Rating Button */}
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => setShowRatingModal(showRatingModal === eventId ? null : eventId)}
@@ -811,8 +1031,10 @@ const EventsScreen = () => {
                         ⭐ Rate
                       </button>
 
+                      {/* Action buttons - varies based on saved status */}
                       {!showSaved && (
                         <>
+                          {/* Info button - expands comments and attendance */}
                           <button
                             className="px-3 py-2 rounded-lg transition-all duration-300 bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium text-sm border border-blue-200"
                             onClick={() => setExpandedEventId(expandedEventId === eventId ? null : eventId)}
@@ -821,8 +1043,10 @@ const EventsScreen = () => {
                             💬 Info
                           </button>
 
+                          {/* Share button */}
                           <ShareButton event={event} eventId={eventId} />
 
+                          {/* Save/Remove button */}
                           <button
                             onClick={() => toggleSave(event)}
                             className={`px-3 py-2 rounded-lg transition-all duration-300 font-medium text-sm border ${
@@ -837,6 +1061,7 @@ const EventsScreen = () => {
                         </>
                       )}
 
+                      {/* Show remove button in saved view */}
                       {showSaved && (
                         <button
                           onClick={() => toggleSave(event)}
@@ -849,7 +1074,7 @@ const EventsScreen = () => {
                     </div>
                   </div>
 
-                  {/* Expandable Sections */}
+                  {/* Expandable Sections - Rating, Attendance, Comments */}
                   {showRatingModal === eventId && (
                     <RatingSection eventId={eventId} eventStatus={status.label} />
                   )}
