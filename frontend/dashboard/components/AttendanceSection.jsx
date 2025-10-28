@@ -2,8 +2,9 @@
 // IMPORTS & DEPENDENCIES
 // ============================================================================
 
-import React, { useState, useEffect } from 'react';  // React hooks for state and lifecycle
-import '../src/App.css';                              // Application styles
+import React, { useState, useEffect } from 'react'; // React hooks for state and lifecycle
+// Note: The original file had a dependency on '../src/App.css', which is a relative path.
+// I will remove the potentially incorrect relative import as it's not present in the provided context.
 
 // ============================================================================
 // ATTENDANCESECTION COMPONENT
@@ -21,12 +22,12 @@ const AttendanceSection = ({ eventId }) => {
   // STATE MANAGEMENT - Attendance Section
   // ================================================================
   
-  const [attendanceCount, setAttendanceCount] = useState(0);   // Total number of attendees
-  const [attendees, setAttendees] = useState([]);              // List of attendee objects
-  const [isAttending, setIsAttending] = useState(false);       // Is current user attending?
-  const [userName, setUserName] = useState('');                // Current user's name input
-  const [showNameInput, setShowNameInput] = useState(false);   // Show name input form?
-  const [loading, setLoading] = useState(false);               // Loading state for operations
+  const [attendanceCount, setAttendanceCount] = useState(0); 	// Total number of attendees
+  const [attendees, setAttendees] = useState([]); 	 	 	// List of attendee objects
+  const [isAttending, setIsAttending] = useState(false); 	 // Is current user attending?
+  const [userName, setUserName] = useState(''); 	 	 	// Current user's name input
+  const [showNameInput, setShowNameInput] = useState(false); // Show name input form?
+  const [loading, setLoading] = useState(false); 	 	 	// Loading state for operations
 
   /**
    * Fetch attendance data from backend API

@@ -31,7 +31,7 @@ const swaggerOptions = {
     info: {
       title: 'Event Management API',                  // API title
       version: '1.0.0',                               // API version
-      description: 'API documentation for Events and Categories',
+      description: 'API documentation for Events, Categories, Comments, Attendance, and Ratings',
     },
     servers: [
       {
@@ -128,7 +128,19 @@ function writeRatings(ratings) {
 // ============================================================================
 
 /**
- * GET / - Test endpoint to verify server is running
+ * @swagger
+ * /:
+ *   get:
+ *     summary: Health check endpoint
+ *     tags: [General]
+ *     responses:
+ *       200:
+ *         description: Server is running
+ *         content:
+ *           text/plain:
+ *             schema:
+ *               type: string
+ *               example: Backend running ✅
  */
 app.get('/', (req, res) => {
   res.send('Backend running ✅');
@@ -139,12 +151,48 @@ app.get('/', (req, res) => {
 // ============================================================================
 
 /**
- * GET /api/events - Fetch all events with their categories
- * Returns: Array of event objects with category information
+ * @swagger
+ * /api/events:
+ *   get:
+ *     summary: Fetch all events with their categories
+ *     tags: [Events]
+ *     responses:
+ *       200:
+ *         description: List of all events with category information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   event_id:
+ *                     type: integer
+ *                   event_title:
+ *                     type: string
+ *                   start_time:
+ *                     type: string
+ *                     format: date-time
+ *                   end_time:
+ *                     type: string
+ *                     format: date-time
+ *                   location:
+ *                     type: string
+ *                   categories:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         category_id:
+ *                           type: integer
+ *                         category_name:
+ *                           type: string
+ *       500:
+ *         description: Server error
  */
 app.get('/api/events', async (req, res) => {
   try {
-    // Query events table from Supabase
+    // Query events table from Supabase with related categories
     const { data, error } = await supabase
       .from('events')
       .select(`
@@ -186,8 +234,27 @@ app.get('/api/events', async (req, res) => {
 // ============================================================================
 
 /**
- * GET /api/categories - Fetch all event categories
- * Returns: Array of category objects
+ * @swagger
+ * /api/categories:
+ *   get:
+ *     summary: Fetch all event categories
+ *     tags: [Categories]
+ *     responses:
+ *       200:
+ *         description: List of all categories
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   category_id:
+ *                     type: integer
+ *                   category_name:
+ *                     type: string
+ *       500:
+ *         description: Server error
  */
 app.get('/api/categories', async (req, res) => {
   try {
@@ -211,9 +278,41 @@ app.get('/api/categories', async (req, res) => {
 // Comments are stored in Supabase database (not in JSON files)
 
 /**
- * GET /api/events/:eventId/comments - Fetch all comments for an event
- * @param {number} eventId - Event ID
- * Returns: Array of comment objects sorted by newest first
+ * @swagger
+ * /api/events/{eventId}/comments:
+ *   get:
+ *     summary: Fetch all comments for a specific event
+ *     tags: [Comments]
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The event ID
+ *     responses:
+ *       200:
+ *         description: List of comments for the event (sorted by newest first)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   event_id:
+ *                     type: integer
+ *                   author_name:
+ *                     type: string
+ *                   comment_text:
+ *                     type: string
+ *                   created_at:
+ *                     type: string
+ *                     format: date-time
+ *       500:
+ *         description: Server error
  */
 app.get('/api/events/:eventId/comments', async (req, res) => {
   try {
@@ -236,21 +335,69 @@ app.get('/api/events/:eventId/comments', async (req, res) => {
 });
 
 /**
- * POST /api/events/:eventId/comments - Add a new comment to an event
- * @param {number} eventId - Event ID
- * Request body: { authorName: string, commentText: string }
- * Returns: Created comment object
+ * @swagger
+ * /api/events/{eventId}/comments:
+ *   post:
+ *     summary: Add a new comment to an event
+ *     tags: [Comments]
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The event ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - authorName
+ *               - commentText
+ *             properties:
+ *               authorName:
+ *                 type: string
+ *                 description: Name of the comment author
+ *               commentText:
+ *                 type: string
+ *                 description: The comment content
+ *     responses:
+ *       201:
+ *         description: Comment created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                 event_id:
+ *                   type: integer
+ *                 author_name:
+ *                   type: string
+ *                 comment_text:
+ *                   type: string
+ *                 created_at:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Validation error (missing author name or comment text)
+ *       500:
+ *         description: Server error
  */
 app.post('/api/events/:eventId/comments', async (req, res) => {
   try {
     const { eventId } = req.params;
     const { authorName, commentText } = req.body;
 
-    // Validate input
+    // Validate input - author name is required
     if (!authorName || !authorName.trim()) {
       return res.status(400).json({ error: 'Author name is required' });
     }
 
+    // Validate input - comment text is required
     if (!commentText || !commentText.trim()) {
       return res.status(400).json({ error: 'Comment text is required' });
     }
@@ -278,15 +425,37 @@ app.post('/api/events/:eventId/comments', async (req, res) => {
 });
 
 /**
- * DELETE /api/comments/:commentId - Delete a specific comment
- * @param {number} commentId - Comment ID
- * Returns: Success message
+ * @swagger
+ * /api/comments/{commentId}:
+ *   delete:
+ *     summary: Delete a specific comment
+ *     tags: [Comments]
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The comment ID to delete
+ *     responses:
+ *       200:
+ *         description: Comment deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Comment deleted successfully
+ *       500:
+ *         description: Server error
  */
 app.delete('/api/comments/:commentId', async (req, res) => {
   try {
     const { commentId } = req.params;
 
-    // Delete comment from database
+    // Delete comment from database by comment ID
     const { error } = await supabase
       .from('comments')
       .delete()
@@ -302,22 +471,65 @@ app.delete('/api/comments/:commentId', async (req, res) => {
 });
 
 /**
- * PUT /api/comments/:commentId - Update a specific comment
- * @param {number} commentId - Comment ID
- * Request body: { commentText: string }
- * Returns: Updated comment object
+ * @swagger
+ * /api/comments/{commentId}:
+ *   put:
+ *     summary: Update a specific comment
+ *     tags: [Comments]
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The comment ID to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - commentText
+ *             properties:
+ *               commentText:
+ *                 type: string
+ *                 description: The updated comment content
+ *     responses:
+ *       200:
+ *         description: Comment updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                 event_id:
+ *                   type: integer
+ *                 author_name:
+ *                   type: string
+ *                 comment_text:
+ *                   type: string
+ *                 created_at:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Validation error (missing comment text)
+ *       500:
+ *         description: Server error
  */
 app.put('/api/comments/:commentId', async (req, res) => {
   try {
     const { commentId } = req.params;
     const { commentText } = req.body;
 
-    // Validate input
+    // Validate input - comment text is required
     if (!commentText || !commentText.trim()) {
       return res.status(400).json({ error: 'Comment text is required' });
     }
 
-    // Update comment in database
+    // Update comment in database by comment ID
     const { data, error } = await supabase
       .from('comments')
       .update({ comment_text: commentText.trim() })
@@ -334,275 +546,18 @@ app.put('/api/comments/:commentId', async (req, res) => {
   }
 });
 
-// // ============================================================================
-// // ATTENDANCE API ENDPOINTS (FILE-BASED)
-// // ============================================================================
-// // Attendance records are stored in attendance.json file
-
-// /**
-//  * POST /api/events/:eventId/attend - Mark user as attending an event
-//  * @param {number} eventId - Event ID
-//  * Request body: { userName: string }
-//  * Returns: Created attendance record
-//  * Status 400: If user already marked as attending
-//  */
-// app.post('/api/events/:eventId/attend', (req, res) => {
-//   try {
-//     const { eventId } = req.params;
-//     const { userName } = req.body;
-
-//     // Validate input
-//     if (!userName || !userName.trim()) {
-//       return res.status(400).json({ error: 'User name is required' });
-//     }
-
-//     // Read current attendance records
-//     const attendance = readAttendance();
-    
-//     // Check if user already marked as attending this event
-//     const alreadyAttending = attendance.some(
-//       (a) => a.event_id === parseInt(eventId) && a.user_name === userName.trim()
-//     );
-
-//     if (alreadyAttending) {
-//       return res.status(400).json({ error: 'Already marked as attending' });
-//     }
-
-//     // Create new attendance record
-//     const newAttendance = {
-//       attendance_id: Date.now(),              // Unique ID based on timestamp
-//       event_id: parseInt(eventId),
-//       user_name: userName.trim(),
-//       created_at: new Date().toISOString(),   // ISO format timestamp
-//     };
-
-//     // Add to array and save to file
-//     attendance.push(newAttendance);
-//     writeAttendance(attendance);
-
-//     res.status(201).json(newAttendance); // 201 = Created
-//   } catch (err) {
-//     console.error('Error marking attendance:', err.message);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
-// /**
-//  * GET /api/events/:eventId/attendance - Get all attendees for an event
-//  * @param {number} eventId - Event ID
-//  * Returns: { count: number, attendees: Array }
-//  */
-// app.get('/api/events/:eventId/attendance', (req, res) => {
-//   try {
-//     const { eventId } = req.params;
-    
-//     // Read all attendance records
-//     const attendance = readAttendance();
-
-//     // Filter by event_id and sort by newest first
-//     const eventAttendance = attendance
-//       .filter((a) => a.event_id === parseInt(eventId))
-//       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-//     res.json({
-//       count: eventAttendance.length,        // Total number of attendees
-//       attendees: eventAttendance,           // List of attendee objects
-//     });
-//   } catch (err) {
-//     console.error('Error fetching attendance:', err.message);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
-// /**
-//  * GET /api/events/:eventId/check-attendance/:userName - Check if user is attending
-//  * @param {number} eventId - Event ID
-//  * @param {string} userName - User name
-//  * Returns: { isAttending: boolean }
-//  */
-// app.get('/api/events/:eventId/check-attendance/:userName', (req, res) => {
-//   try {
-//     const { eventId, userName } = req.params;
-    
-//     // Read all attendance records
-//     const attendance = readAttendance();
-
-//     // Check if user exists in attendance list for this event
-//     const isAttending = attendance.some(
-//       (a) => a.event_id === parseInt(eventId) && a.user_name === userName
-//     );
-
-//     res.json({ isAttending });
-//   } catch (err) {
-//     console.error('Error checking attendance:', err.message);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
-// /**
-//  * DELETE /api/events/:eventId/attend - Remove user's attendance
-//  * @param {number} eventId - Event ID
-//  * Request body: { userName: string }
-//  * Returns: Success message
-//  */
-// app.delete('/api/events/:eventId/attend', (req, res) => {
-//   try {
-//     const { eventId } = req.params;
-//     const { userName } = req.body;
-
-//     // Validate input
-//     if (!userName) {
-//       return res.status(400).json({ error: 'User name is required' });
-//     }
-
-//     // Read current attendance records
-//     let attendance = readAttendance();
-
-//     // Filter out the attendance record for this user and event
-//     attendance = attendance.filter(
-//       (a) => !(a.event_id === parseInt(eventId) && a.user_name === userName)
-//     );
-
-//     // Save updated records
-//     writeAttendance(attendance);
-
-//     res.json({ message: 'Attendance removed successfully' });
-//   } catch (err) {
-//     console.error('Error removing attendance:', err.message);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
-// // ============================================================================
-// // RATINGS API ENDPOINTS (FILE-BASED)
-// // ============================================================================
-// // Rating records are stored in ratings.json file
-
-// /**
-//  * POST /api/events/:eventId/rating - Submit a rating for an event
-//  * @param {number} eventId - Event ID
-//  * Request body: { userName: string, rating: number (1-5) }
-//  * Returns: Created rating record
-//  * Status 400: If user already rated or invalid rating
-//  */
-// app.post('/api/events/:eventId/rating', (req, res) => {
-//   try {
-//     const { eventId } = req.params;
-//     const { userName, rating } = req.body;
-
-//     // Validate user name
-//     if (!userName || !userName.trim()) {
-//       return res.status(400).json({ error: 'User name is required' });
-//     }
-
-//     // Validate rating (must be 1-5)
-//     if (!rating || rating < 1 || rating > 5) {
-//       return res.status(400).json({ error: 'Rating must be between 1 and 5' });
-//     }
-
-//     // Read current ratings
-//     const ratings = readRatings();
-
-//     // Check if user already rated this event
-//     const alreadyRated = ratings.some(
-//       (r) => r.event_id === parseInt(eventId) && r.user_name === userName.trim()
-//     );
-
-//     if (alreadyRated) {
-//       return res.status(400).json({ error: 'You have already rated this event' });
-//     }
-
-//     // Create new rating record
-//     const newRating = {
-//       rating_id: Date.now(),                 // Unique ID based on timestamp
-//       event_id: parseInt(eventId),
-//       user_name: userName.trim(),
-//       rating: parseInt(rating),              // Convert to integer (1-5)
-//       created_at: new Date().toISOString(),  // ISO format timestamp
-//     };
-
-//     // Add to array and save to file
-//     ratings.push(newRating);
-//     writeRatings(ratings);
-
-//     res.status(201).json(newRating); // 201 = Created
-//   } catch (err) {
-//     console.error('Error submitting rating:', err.message);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
-// /**
-//  * GET /api/events/:eventId/rating - Get all ratings for an event
-//  * @param {number} eventId - Event ID
-//  * Returns: { averageRating: number, totalRatings: number, ratings: Array }
-//  */
-// app.get('/api/events/:eventId/rating', (req, res) => {
-//   try {
-//     const { eventId } = req.params;
-    
-//     // Read all ratings
-//     const ratings = readRatings();
-
-//     // Filter by event_id and sort by newest first
-//     const eventRatings = ratings
-//       .filter((r) => r.event_id === parseInt(eventId))
-//       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-//     // Calculate average rating
-//     const totalRatings = eventRatings.length;
-//     const averageRating = totalRatings > 0
-//       ? (eventRatings.reduce((sum, r) => sum + r.rating, 0) / totalRatings).toFixed(1)
-//       : 0;
-
-//     res.json({
-//       averageRating: parseFloat(averageRating),  // Convert to number
-//       totalRatings,                              // Total count
-//       ratings: eventRatings,                     // All ratings for this event
-//     });
-//   } catch (err) {
-//     console.error('Error fetching ratings:', err.message);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
-// /**
-//  * GET /api/events/:eventId/check-rating/:userName - Check if user already rated
-//  * @param {number} eventId - Event ID
-//  * @param {string} userName - User name
-//  * Returns: { hasRated: boolean, userRating: number|null }
-//  */
-// app.get('/api/events/:eventId/check-rating/:userName', (req, res) => {
-//   try {
-//     const { eventId, userName } = req.params;
-    
-//     // Read all ratings
-//     const ratings = readRatings();
-
-//     // Find user's rating for this event
-//     const userRating = ratings.find(
-//       (r) => r.event_id === parseInt(eventId) && r.user_name === userName
-//     );
-
-//     res.json({
-//       hasRated: !!userRating,                     // Boolean: has user rated?
-//       userRating: userRating ? userRating.rating : null, // User's rating or null
-//     });
-//   } catch (err) {
-//     console.error('Error checking rating:', err.message);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
-
-
-// --- Attendance API Endpoints (Database-based) ---
+// ============================================================================
+// ATTENDANCE API ENDPOINTS (DATABASE-BASED)
+// ============================================================================
+// Attendance records track which users are attending which events
+// Each user can only attend an event once (enforced by unique constraint)
 
 /**
  * @swagger
  * /api/events/{eventId}/attend:
  *   post:
  *     summary: Mark user as attending an event
+ *     description: Creates an attendance record for a user at a specific event. Each user can only attend an event once.
  *     tags: [Attendance]
  *     parameters:
  *       - in: path
@@ -610,31 +565,52 @@ app.put('/api/comments/:commentId', async (req, res) => {
  *         required: true
  *         schema:
  *           type: integer
+ *         description: The event ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - userName
  *             properties:
  *               userName:
  *                 type: string
+ *                 description: Name of the user attending the event
  *     responses:
  *       201:
  *         description: Attendance marked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 attendance_id:
+ *                   type: integer
+ *                 event_id:
+ *                   type: integer
+ *                 user_name:
+ *                   type: string
+ *                 created_at:
+ *                   type: string
+ *                   format: date-time
  *       400:
- *         description: Already attending or validation error
+ *         description: Validation error or user already attending
+ *       500:
+ *         description: Server error
  */
 app.post('/api/events/:eventId/attend', async (req, res) => {
   try {
     const { eventId } = req.params;
     const { userName } = req.body;
     
+    // Validate input - user name is required
     if (!userName || !userName.trim()) {
       return res.status(400).json({ error: 'User name is required' });
     }
     
-    // Insert attendance record
+    // Insert attendance record into database
     const { data, error } = await supabase
       .from('attendance')
       .insert([
@@ -646,14 +622,14 @@ app.post('/api/events/:eventId/attend', async (req, res) => {
       .select();
     
     if (error) {
-      // Check if it's a duplicate entry error
+      // Check if it's a duplicate entry error (unique constraint violation)
       if (error.code === '23505') {
         return res.status(400).json({ error: 'Already marked as attending' });
       }
       throw error;
     }
     
-    res.status(201).json(data[0]);
+    res.status(201).json(data[0]); // 201 = Created
   } catch (err) {
     console.error('Error marking attendance:', err.message);
     res.status(500).json({ error: err.message });
@@ -665,6 +641,7 @@ app.post('/api/events/:eventId/attend', async (req, res) => {
  * /api/events/{eventId}/attendance:
  *   get:
  *     summary: Get attendance count and list for an event
+ *     description: Retrieves all attendees for a specific event, including total count
  *     tags: [Attendance]
  *     parameters:
  *       - in: path
@@ -672,9 +649,10 @@ app.post('/api/events/:eventId/attend', async (req, res) => {
  *         required: true
  *         schema:
  *           type: integer
+ *         description: The event ID
  *     responses:
  *       200:
- *         description: Attendance details
+ *         description: Attendance details (sorted by most recent first)
  *         content:
  *           application/json:
  *             schema:
@@ -682,24 +660,38 @@ app.post('/api/events/:eventId/attend', async (req, res) => {
  *               properties:
  *                 count:
  *                   type: integer
+ *                   description: Total number of attendees
  *                 attendees:
  *                   type: array
  *                   items:
  *                     type: object
+ *                     properties:
+ *                       attendance_id:
+ *                         type: integer
+ *                       event_id:
+ *                         type: integer
+ *                       user_name:
+ *                         type: string
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *       500:
+ *         description: Server error
  */
 app.get('/api/events/:eventId/attendance', async (req, res) => {
   try {
     const { eventId } = req.params;
     
-    // Fetch all attendance records for this event
+    // Fetch all attendance records for this event from database
     const { data, error } = await supabase
       .from('attendance')
       .select('attendance_id, event_id, user_name, created_at')
       .eq('event_id', parseInt(eventId))
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }); // Newest first
     
     if (error) throw error;
     
+    // Return count and full list of attendees
     res.json({
       count: data.length,
       attendees: data
@@ -715,6 +707,7 @@ app.get('/api/events/:eventId/attendance', async (req, res) => {
  * /api/events/{eventId}/attend:
  *   delete:
  *     summary: Remove user's attendance from an event
+ *     description: Deletes an attendance record, allowing users to un-attend an event
  *     tags: [Attendance]
  *     parameters:
  *       - in: path
@@ -722,29 +715,46 @@ app.get('/api/events/:eventId/attendance', async (req, res) => {
  *         required: true
  *         schema:
  *           type: integer
+ *         description: The event ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - userName
  *             properties:
  *               userName:
  *                 type: string
+ *                 description: Name of the user to remove from attendance
  *     responses:
  *       200:
  *         description: Attendance removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Attendance removed successfully
+ *       400:
+ *         description: Validation error (missing user name)
+ *       500:
+ *         description: Server error
  */
 app.delete('/api/events/:eventId/attend', async (req, res) => {
   try {
     const { eventId } = req.params;
     const { userName } = req.body;
     
+    // Validate input - user name is required
     if (!userName) {
       return res.status(400).json({ error: 'User name is required' });
     }
     
-    // Delete attendance record
+    // Delete attendance record from database
     const { error } = await supabase
       .from('attendance')
       .delete()
@@ -765,6 +775,7 @@ app.delete('/api/events/:eventId/attend', async (req, res) => {
  * /api/events/{eventId}/check-attendance/{userName}:
  *   get:
  *     summary: Check if a specific user is attending an event
+ *     description: Verifies whether a user has already marked attendance for an event
  *     tags: [Attendance]
  *     parameters:
  *       - in: path
@@ -772,28 +783,42 @@ app.delete('/api/events/:eventId/attend', async (req, res) => {
  *         required: true
  *         schema:
  *           type: integer
+ *         description: The event ID
  *       - in: path
  *         name: userName
  *         required: true
  *         schema:
  *           type: string
+ *         description: The user name to check
  *     responses:
  *       200:
- *         description: Attendance status
+ *         description: Attendance status for the user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isAttending:
+ *                   type: boolean
+ *                   description: True if user is attending, false otherwise
+ *       500:
+ *         description: Server error
  */
 app.get('/api/events/:eventId/check-attendance/:userName', async (req, res) => {
   try {
     const { eventId, userName } = req.params;
     
+    // Check if attendance record exists for this user and event
     const { data, error } = await supabase
       .from('attendance')
       .select('attendance_id')
       .eq('event_id', parseInt(eventId))
       .eq('user_name', userName)
-      .maybeSingle();
+      .maybeSingle(); // Returns null if not found, doesn't throw error
     
     if (error) throw error;
     
+    // Return boolean indicating if user is attending
     res.json({ isAttending: !!data });
   } catch (err) {
     console.error('Error checking attendance:', err.message);
@@ -801,13 +826,18 @@ app.get('/api/events/:eventId/check-attendance/:userName', async (req, res) => {
   }
 });
 
-// --- Ratings API Endpoints (Database-based) ---
+// ============================================================================
+// RATINGS API ENDPOINTS (DATABASE-BASED)
+// ============================================================================
+// Ratings allow users to rate events on a scale of 1-5 stars
+// Each user can only rate an event once (enforced by unique constraint)
 
 /**
  * @swagger
  * /api/events/{eventId}/rating:
  *   post:
  *     summary: Submit a rating for an event
+ *     description: Creates a rating record for an event. Each user can only rate an event once. Rating must be between 1 and 5.
  *     tags: [Ratings]
  *     parameters:
  *       - in: path
@@ -815,40 +845,65 @@ app.get('/api/events/:eventId/check-attendance/:userName', async (req, res) => {
  *         required: true
  *         schema:
  *           type: integer
+ *         description: The event ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - userName
+ *               - rating
  *             properties:
  *               userName:
  *                 type: string
+ *                 description: Name of the user submitting the rating
  *               rating:
  *                 type: integer
  *                 minimum: 1
  *                 maximum: 5
+ *                 description: Rating value (1-5 stars)
  *     responses:
  *       201:
  *         description: Rating submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 rating_id:
+ *                   type: integer
+ *                 event_id:
+ *                   type: integer
+ *                 user_name:
+ *                   type: string
+ *                 rating:
+ *                   type: integer
+ *                 created_at:
+ *                   type: string
+ *                   format: date-time
  *       400:
- *         description: Invalid rating or already rated
+ *         description: Validation error (invalid rating, missing fields, or already rated)
+ *       500:
+ *         description: Server error
  */
 app.post('/api/events/:eventId/rating', async (req, res) => {
   try {
     const { eventId } = req.params;
     const { userName, rating } = req.body;
     
-    // Validate inputs
+    // Validate input - user name is required
     if (!userName || !userName.trim()) {
       return res.status(400).json({ error: 'User name is required' });
     }
     
+    // Validate input - rating must be between 1 and 5
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({ error: 'Rating must be between 1 and 5' });
     }
     
-    // Insert rating
+    // Insert rating record into database
     const { data, error } = await supabase
       .from('ratings')
       .insert([
@@ -861,14 +916,14 @@ app.post('/api/events/:eventId/rating', async (req, res) => {
       .select();
     
     if (error) {
-      // Check if user already rated
+      // Check if user already rated this event (unique constraint violation)
       if (error.code === '23505') {
         return res.status(400).json({ error: 'You have already rated this event' });
       }
       throw error;
     }
     
-    res.status(201).json(data[0]);
+    res.status(201).json(data[0]); // 201 = Created
   } catch (err) {
     console.error('Error submitting rating:', err.message);
     res.status(500).json({ error: err.message });
@@ -880,6 +935,7 @@ app.post('/api/events/:eventId/rating', async (req, res) => {
  * /api/events/{eventId}/rating:
  *   get:
  *     summary: Get average rating and rating details for an event
+ *     description: Retrieves all ratings for an event and calculates the average rating
  *     tags: [Ratings]
  *     parameters:
  *       - in: path
@@ -887,9 +943,10 @@ app.post('/api/events/:eventId/rating', async (req, res) => {
  *         required: true
  *         schema:
  *           type: integer
+ *         description: The event ID
  *     responses:
  *       200:
- *         description: Rating information
+ *         description: Rating information (ratings sorted by most recent first)
  *         content:
  *           application/json:
  *             schema:
@@ -897,32 +954,48 @@ app.post('/api/events/:eventId/rating', async (req, res) => {
  *               properties:
  *                 averageRating:
  *                   type: number
+ *                   format: float
+ *                   description: Average rating (0 if no ratings)
  *                 totalRatings:
  *                   type: integer
+ *                   description: Total number of ratings
  *                 ratings:
  *                   type: array
  *                   items:
  *                     type: object
+ *                     properties:
+ *                       rating_id:
+ *                         type: integer
+ *                       user_name:
+ *                         type: string
+ *                       rating:
+ *                         type: integer
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *       500:
+ *         description: Server error
  */
 app.get('/api/events/:eventId/rating', async (req, res) => {
   try {
     const { eventId } = req.params;
     
-    // Fetch all ratings for this event
+    // Fetch all ratings for this event from database
     const { data, error } = await supabase
       .from('ratings')
       .select('rating_id, user_name, rating, created_at')
       .eq('event_id', parseInt(eventId))
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }); // Newest first
     
     if (error) throw error;
     
-    // Calculate average
+    // Calculate average rating from all ratings
     const totalRatings = data.length;
     const averageRating = totalRatings > 0 
       ? (data.reduce((sum, r) => sum + r.rating, 0) / totalRatings).toFixed(1)
       : 0;
     
+    // Return average, count, and full list of ratings
     res.json({
       averageRating: parseFloat(averageRating),
       totalRatings,
@@ -939,6 +1012,7 @@ app.get('/api/events/:eventId/rating', async (req, res) => {
  * /api/events/{eventId}/check-rating/{userName}:
  *   get:
  *     summary: Check if a user has already rated an event
+ *     description: Verifies whether a user has submitted a rating for an event and returns their rating if it exists
  *     tags: [Ratings]
  *     parameters:
  *       - in: path
@@ -946,14 +1020,16 @@ app.get('/api/events/:eventId/rating', async (req, res) => {
  *         required: true
  *         schema:
  *           type: integer
+ *         description: The event ID
  *       - in: path
  *         name: userName
  *         required: true
  *         schema:
  *           type: string
+ *         description: The user name to check
  *     responses:
  *       200:
- *         description: Rating status
+ *         description: Rating status for the user
  *         content:
  *           application/json:
  *             schema:
@@ -961,22 +1037,29 @@ app.get('/api/events/:eventId/rating', async (req, res) => {
  *               properties:
  *                 hasRated:
  *                   type: boolean
+ *                   description: True if user has rated the event, false otherwise
  *                 userRating:
  *                   type: integer
+ *                   nullable: true
+ *                   description: The user's rating (1-5) or null if not rated
+ *       500:
+ *         description: Server error
  */
 app.get('/api/events/:eventId/check-rating/:userName', async (req, res) => {
   try {
     const { eventId, userName } = req.params;
     
+    // Check if rating record exists for this user and event
     const { data, error } = await supabase
       .from('ratings')
       .select('rating')
       .eq('event_id', parseInt(eventId))
       .eq('user_name', userName)
-      .maybeSingle();
+      .maybeSingle(); // Returns null if not found, doesn't throw error
     
     if (error) throw error;
     
+    // Return boolean indicating if user has rated, and their rating value
     res.json({ 
       hasRated: !!data,
       userRating: data ? data.rating : null
@@ -986,8 +1069,6 @@ app.get('/api/events/:eventId/check-rating/:userName', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-
 
 // ============================================================================
 // START SERVER
@@ -1004,4 +1085,3 @@ app.listen(PORT, () => {
 // ============================================================================
 // END OF FILE
 // ============================================================================
-

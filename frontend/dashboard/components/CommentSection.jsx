@@ -7,11 +7,11 @@ import React, { useState, useEffect } from 'react';  // React hooks for state an
 // ============================================================================
 // COMMENTSECTION COMPONENT
 // ============================================================================
-// Manages event comments with create and delete functionality
+// Manages event comments with create, update, and delete functionality
 
 /**
  * CommentSection Component
- * Displays comments for an event and allows users to add/delete comments
+ * Displays comments for an event and allows users to add/edit/delete comments
  * Fetches data from backend API
  * @param {string} eventId - Event identifier for API calls
  */
@@ -25,6 +25,8 @@ const CommentSection = ({ eventId }) => {
   const [commentText, setCommentText] = useState('');     // Current comment text being typed
   const [loading, setLoading] = useState(false);          // Loading state for add operation
   const [deletingId, setDeletingId] = useState(null);     // ID of comment being deleted
+  const [editingId, setEditingId] = useState(null);       // ID of comment being edited
+  const [editText, setEditText] = useState('');           // Text content for editing
 
   /**
    * Fetch comments on component mount
@@ -88,6 +90,61 @@ const CommentSection = ({ eventId }) => {
       alert('Error adding comment');
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * Initiates edit mode for a comment
+   * Sets the editing state and populates edit text
+   * @param {object} comment - Comment object to edit
+   */
+  const startEditing = (comment) => {
+    setEditingId(comment.id);
+    setEditText(comment.comment_text);
+  };
+
+  /**
+   * Cancels edit mode without saving changes
+   * Resets editing state
+   */
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditText('');
+  };
+
+  /**
+   * Updates a comment with new text
+   * Validates input before submission
+   * Calls PUT /api/comments/:commentId endpoint
+   * @param {string} commentId - ID of comment to update
+   */
+  const updateComment = async (commentId) => {
+    // Validate that edit text is not empty
+    if (!editText.trim()) {
+      alert('Comment text cannot be empty');
+      return;
+    }
+
+    try {
+      // Send PUT request to update comment
+      const response = await fetch(`http://localhost:3000/api/comments/${commentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentText: editText.trim() })
+      });
+
+      if (response.ok) {
+        // Exit edit mode
+        setEditingId(null);
+        setEditText('');
+        // Refresh comments list to show updated comment
+        fetchComments();
+      } else {
+        alert('Failed to update comment');
+      }
+    } catch (error) {
+      console.error('Error updating comment:', error);
+      alert('Error updating comment');
     }
   };
 
@@ -178,17 +235,59 @@ const CommentSection = ({ eventId }) => {
                 </span>
               </div>
               
-              {/* Comment text content */}
-              <p className="text-blue-800 text-sm mb-2">{comment.comment_text}</p>
-              
-              {/* Delete button for individual comments */}
-              <button
-                onClick={() => deleteComment(comment.id)}
-                disabled={deletingId === comment.id}
-                className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded font-medium transition-colors disabled:opacity-50"
-              >
-                {deletingId === comment.id ? '⏳ Deleting...' : '🗑️ Delete'}
-              </button>
+              {/* Conditional rendering: Edit mode or View mode */}
+              {editingId === comment.id ? (
+                // EDIT MODE - Show textarea and save/cancel buttons
+                <div className="space-y-2">
+                  <textarea
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    rows="3"
+                  />
+                  <div className="flex gap-2">
+                    {/* Save button */}
+                    <button
+                      onClick={() => updateComment(comment.id)}
+                      className="text-xs text-green-600 hover:text-green-800 hover:bg-green-50 px-3 py-1 rounded font-medium transition-colors"
+                    >
+                      ✅ Save
+                    </button>
+                    {/* Cancel button */}
+                    <button
+                      onClick={cancelEditing}
+                      className="text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-50 px-3 py-1 rounded font-medium transition-colors"
+                    >
+                      ❌ Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                // VIEW MODE - Show comment text and action buttons
+                <>
+                  {/* Comment text content */}
+                  <p className="text-blue-800 text-sm mb-2">{comment.comment_text}</p>
+                  
+                  {/* Action buttons: Edit and Delete */}
+                  <div className="flex gap-2">
+                    {/* Edit button */}
+                    <button
+                      onClick={() => startEditing(comment)}
+                      className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded font-medium transition-colors"
+                    >
+                      ✏️ Edit
+                    </button>
+                    {/* Delete button */}
+                    <button
+                      onClick={() => deleteComment(comment.id)}
+                      disabled={deletingId === comment.id}
+                      className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded font-medium transition-colors disabled:opacity-50"
+                    >
+                      {deletingId === comment.id ? '⏳ Deleting...' : '🗑️ Delete'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>
