@@ -232,81 +232,102 @@ const CommentSection = ({ eventId }) => {
 // ============================================================================
 // ATTENDANCESECTION COMPONENT
 // ============================================================================
-// Manages event attendance tracking with add and remove functionality
+// Displays event attendance count and allows users to mark attendance
 
 /**
  * AttendanceSection Component
- * Displays event attendance and allows users to mark themselves as attending
- * Manages attendance count and attendee list
+ * Displays event attendance count and allows users to mark attendance
+ * Interacts with database to persist attendance records
  * @param {string} eventId - Event identifier for API calls
  */
 const AttendanceSection = ({ eventId }) => {
-  // State management
-  const [attendanceCount, setAttendanceCount] = useState(0);   // Total attendees
-  const [attendees, setAttendees] = useState([]);              // List of attendees
-  const [userName, setUserName] = useState('');                // Current user's name
-  const [isAttending, setIsAttending] = useState(false);       // Is user already attending?
-  const [loading, setLoading] = useState(false);               // Loading state for operations
-  const [message, setMessage] = useState('');                  // Feedback message
+  const [attendanceCount, setAttendanceCount] = useState(0);
+  const [userName, setUserName] = useState('');
+  const [isAttending, setIsAttending] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   /**
-   * Fetch attendance data on component mount
+   * Fetch attendance count on component mount
    */
   useEffect(() => {
-    fetchAttendance();
+    const initializeAttendance = async () => {
+      await fetchAttendanceCount();
+      // Check localStorage for saved user name
+      const savedName = localStorage.getItem(`attendee_${eventId}`);
+      if (savedName) {
+        setUserName(savedName);
+        // Verify user is actually in the attendance list
+        await checkIfUserAttending(savedName);
+      }
+    };
+    initializeAttendance();
   }, [eventId]);
 
   /**
-   * Check attendance status when user name changes
+   * Fetches attendance count from backend
    */
-  useEffect(() => {
-    if (userName.trim()) {
-      checkAttendance();
-    }
-  }, [userName]);
-
-  /**
-   * Fetches attendance count and attendees list from backend
-   */
-  const fetchAttendance = async () => {
+  const fetchAttendanceCount = async () => {
     try {
       const response = await fetch(`http://localhost:3000/api/events/${eventId}/attendance`);
+      if (!response.ok) throw new Error('Failed to fetch attendance');
+      
       const data = await response.json();
-      setAttendanceCount(data.count);
-      setAttendees(data.attendees);
+      setAttendanceCount(data.count || 0);
+      setError('');
     } catch (error) {
       console.error('Error fetching attendance:', error);
+      setError('Failed to load attendance');
     }
   };
 
   /**
-   * Checks if the current user is already marked as attending
+   * Checks if the user is actually in the attendance list
    */
-  const checkAttendance = async () => {
+  const checkIfUserAttending = async (name) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/events/${eventId}/check-attendance/${userName.trim()}`
+        `http://localhost:3000/api/events/${eventId}/check-attendance/${name}`
       );
+      
+      if (!response.ok) throw new Error('Failed to check attendance');
+      
       const data = await response.json();
       setIsAttending(data.isAttending);
     } catch (error) {
       console.error('Error checking attendance:', error);
+      setIsAttending(false);
     }
   };
 
   /**
-   * Marks the current user as attending the event
-   * Validates user input before submission
+   * Handles mark attendance button click
    */
-  const markAttendance = async () => {
-    // Validate user name input
-    if (!userName.trim()) {
-      setMessage('⚠️ Please enter your name');
+  const handleAttendClick = () => {
+    const savedName = localStorage.getItem(`attendee_${eventId}`);
+    if (savedName) {
+      // User already has a name saved, mark attendance directly
+      markAttendance(savedName);
+    } else {
+      // Show name input form
+      setShowNameInput(true);
+    }
+  };
+
+  /**
+   * Marks the user as attending and updates database
+   */
+  const markAttendance = async (name) => {
+    if (!name || !name.trim()) {
+      setError('⚠️ Please enter your name');
       return;
     }
 
     setLoading(true);
-    setMessage('');
+    setError('');
+    setSuccessMessage('');
 
     try {
       // Send POST request to mark attendance
@@ -315,36 +336,53 @@ const AttendanceSection = ({ eventId }) => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userName: userName.trim() })
+          body: JSON.stringify({ userName: name.trim() })
         }
       );
 
       const data = await response.json();
 
       if (response.ok) {
-        setMessage('✅ Marked as attending!');
+        // ✅ Success: Save to localStorage and update UI
+        localStorage.setItem(`attendee_${eventId}`, name.trim());
+        setUserName(name.trim());
         setIsAttending(true);
-        fetchAttendance(); // Refresh list
+        setShowNameInput(false);
+        setSuccessMessage('✅ You marked as attending!');
+        
+        // Refresh count from database
+        await fetchAttendanceCount();
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccessMessage(''), 3000);
       } else {
-        setMessage(`❌ ${data.error}`);
+        // ❌ Error: User already attending or other issue
+        setError(`❌ ${data.error || 'Failed to mark attendance'}`);
       }
     } catch (error) {
-      setMessage('❌ Error marking attendance');
-      console.error('Error:', error);
+      console.error('Error marking attendance:', error);
+      setError('❌ Network error. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   /**
-   * Removes the current user from event attendance
+   * Removes user from attendance
    */
   const removeAttendance = async () => {
+    if (!userName.trim()) {
+      setError('❌ User name is missing');
+      return;
+    }
+
     setLoading(true);
-    setMessage('');
+    setError('');
+    setSuccessMessage('');
 
     try {
-      // Send DELETE request to remove attendance
+      console.log('Removing attendance for:', userName);
+      
       const response = await fetch(
         `http://localhost:3000/api/events/${eventId}/attend`,
         {
@@ -355,13 +393,24 @@ const AttendanceSection = ({ eventId }) => {
       );
 
       if (response.ok) {
-        setMessage('✅ Attendance removed');
+        // ✅ Success
+        localStorage.removeItem(`attendee_${eventId}`);
+        setUserName('');
         setIsAttending(false);
-        fetchAttendance(); // Refresh list
+        setSuccessMessage('✅ Attendance removed');
+        
+        // Refresh count from database
+        await fetchAttendanceCount();
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        const data = await response.json();
+        setError(`❌ ${data.error || 'Failed to remove attendance'}`);
       }
     } catch (error) {
-      setMessage('❌ Error removing attendance');
-      console.error('Error:', error);
+      console.error('Error removing attendance:', error);
+      setError('❌ Network error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -369,64 +418,99 @@ const AttendanceSection = ({ eventId }) => {
 
   return (
     <div className="mt-4 p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+      {/* Attendance Count Badge */}
       <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
-        👥 Attendance
-        <span className="bg-green-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+        👥 Attendance: 
+        <span className="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold">
           {attendanceCount}
         </span>
       </h4>
 
-      {/* Attendance input and action buttons */}
-      <div className="space-y-3">
-        <input
-          type="text"
-          placeholder="Your name"
-          value={userName}
-          onChange={(e) => setUserName(e.target.value)}
-          className="w-full px-3 py-2 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm bg-white"
-          disabled={loading}
-        />
+      {/* Show error message if exists */}
+      {error && (
+        <div className="mb-3 p-2 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
-        {/* Show appropriate button based on attendance status */}
-        {!isAttending ? (
+      {/* Show success message if exists */}
+      {successMessage && (
+        <div className="mb-3 p-2 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm">
+          {successMessage}
+        </div>
+      )}
+
+      {/* Main Attendance Flow */}
+      {!showNameInput ? (
+        !isAttending ? (
+          // ❌ NOT ATTENDING - Show button to mark attendance
           <button
-            onClick={markAttendance}
+            onClick={handleAttendClick}
             disabled={loading}
-            className="w-full py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all disabled:bg-gray-400 text-sm"
+            className="w-full py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
           >
-            {loading ? 'Processing...' : '✓ Mark as Attending'}
+            {loading ? '⏳ Processing...' : '✓ Mark as Attending'}
           </button>
         ) : (
-          <button
-            onClick={removeAttendance}
+          // ✅ ALREADY ATTENDING - Show status and remove button
+          <>
+            <div className="mb-3 p-3 bg-green-100 border border-green-400 rounded-lg">
+              <p className="font-semibold text-green-700 text-sm">
+                ✓ You're attending as <span className="font-bold">{userName}</span>
+              </p>
+            </div>
+
+            <button
+              onClick={removeAttendance}
+              disabled={loading}
+              className="w-full py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+            >
+              {loading ? '⏳ Processing...' : '✗ Remove Attendance'}
+            </button>
+          </>
+        )
+      ) : (
+        // ✅ NAME INPUT FORM
+        <div className="space-y-3">
+          <label className="block text-sm font-semibold text-green-900">
+            Enter Your Name:
+          </label>
+          <input
+            type="text"
+            value={userName}
+            onChange={(e) => {
+              setUserName(e.target.value);
+              setError('');
+            }}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && !loading && userName.trim()) {
+                markAttendance(userName);
+              }
+            }}
+            placeholder="e.g., John Doe"
+            className="w-full px-3 py-2 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm bg-white"
             disabled={loading}
-            className="w-full py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-all disabled:bg-gray-400 text-sm"
-          >
-            {loading ? 'Processing...' : '✗ Remove Attendance'}
-          </button>
-        )}
-
-        {/* Feedback message for user actions */}
-        {message && (
-          <div className={`p-2 rounded-lg text-sm ${
-            message.includes('✅') ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-red-100 text-red-700 border border-red-300'
-          }`}>
-            {message}
-          </div>
-        )}
-      </div>
-
-      {/* Display list of attendees */}
-      {attendees.length > 0 && (
-        <div className="mt-4">
-          <h5 className="text-sm font-semibold text-green-900 mb-2">Attendees:</h5>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
-            {attendees.map((attendee) => (
-              <div key={attendee.attendance_id} className="flex items-center gap-2 p-2 bg-white rounded border border-green-200 text-sm">
-                <span className="text-green-600 font-bold">✓</span>
-                <span className="font-medium text-green-900">{attendee.user_name}</span>
-              </div>
-            ))}
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => markAttendance(userName)}
+              disabled={loading || !userName.trim()}
+              className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition-colors text-sm"
+            >
+              {loading ? '⏳ Saving...' : 'Submit'}
+            </button>
+            <button
+              onClick={() => {
+                setShowNameInput(false);
+                setUserName('');
+                setError('');
+              }}
+              disabled={loading}
+              className="flex-1 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition-colors text-sm"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
