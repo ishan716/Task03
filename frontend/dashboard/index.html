@@ -1,13 +1,55 @@
+<!-- ============================================================================ -->
+<!-- HTML DOCUMENT STRUCTURE                                                     -->
+<!-- ============================================================================ -->
+<!-- Main HTML entry point for the React application                             -->
+
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- ================================================================ -->
+    <!-- META INFORMATION                                                 -->
+    <!-- ================================================================ -->
+    
+    <!-- Specify character encoding for the document (UTF-8) -->
     <meta charset="UTF-8" />
+    
+    <!-- Favicon - Icon displayed in browser tab -->
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    
+    <!-- Viewport settings for responsive design on mobile devices -->
+    <!-- width=device-width: Match device screen width -->
+    <!-- initial-scale=1.0: Initial zoom level -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
+    
+    <!-- Page title displayed in browser tab -->
+    <title>Event Management Dashboard</title>
   </head>
+  
   <body>
+    <!-- ================================================================ -->
+    <!-- ROOT ELEMENT FOR REACT APPLICATION                              -->
+    <!-- ================================================================ -->
+    
+    <!-- 
+      This div is the mounting point for the React application
+      React renders all components inside this element
+      ID 'root' is targeted by main.jsx to initialize the app
+    -->
     <div id="root"></div>
+    
+    <!-- ================================================================ -->
+    <!-- JAVASCRIPT ENTRY POINT                                          -->
+    <!-- ================================================================ -->
+    
+    <!-- 
+      Load main.jsx as a module script
+      This is the entry point for the React application
+      Vite uses this to bundle and load the entire application
+    -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
+
+<!-- ============================================================================ -->
+<!-- END OF FILE                                                                  -->
+<!-- ============================================================================ -->
