@@ -121,11 +121,12 @@ const EventsScreen = () => {
   }, []);
 
   // Helper functions
-  const getEventId = (event) => event.id || event.event_id;
+  const getEventId = (event) => event.id || event.event_id;// get event's id
 
+  // function to save/remove an event
   const toggleSave = (event) => {
-    const eventId = getEventId(event);
-    setSavedEvents((prev) => {
+    const eventId = getEventId(event); 
+    setSavedEvents((prev) => {  // if the event is already saved, it removes it
       const newSavedEvents = prev.includes(eventId)
         ? prev.filter((e) => e !== eventId)
         : [...prev, eventId];
@@ -162,7 +163,7 @@ const EventsScreen = () => {
   if (loading) return <p className="p-6 text-center text-gray-600">Loading events...</p>;
   if (error) return <p className="p-6 text-center text-red-600">Error: {error}</p>;
 
-  // Filter events
+  // Filter events list and returns only the saved ones when showSaved is true
   const displayedEvents = showSaved
     ? events.filter((event) => savedEvents.includes(getEventId(event)))
     : events;
@@ -354,9 +355,10 @@ const EventsScreen = () => {
                           {/* Share Button */}
                           <ShareButton event={event} eventId={eventId} />
 
-                          {/* Save Button */}
+                          {/* Save Button */} 
+                    
                           <button
-                            onClick={() => toggleSave(event)}
+                            onClick={() => toggleSave(event)}// this button is shown in every event
                             className={`px-3 py-2 rounded-lg transition-all duration-300 font-medium text-sm border ${
                               savedEvents.includes(eventId)
                                 ? "bg-red-100 text-red-700 border-red-300 hover:bg-red-200"
@@ -370,7 +372,7 @@ const EventsScreen = () => {
                       )}
 
                       {showSaved && (
-                        <button
+                        <button // remove button
                           onClick={() => toggleSave(event)}
                           className="px-3 py-2 rounded-lg transition-all duration-300 bg-red-100 text-red-700 hover:bg-red-200 font-medium text-sm border border-red-300"
                           title="Remove from saved"
