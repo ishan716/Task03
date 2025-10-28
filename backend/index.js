@@ -1,49 +1,75 @@
-const express = require('express');
-const cors = require('cors');
-const supabase = require('./db');
-const swaggerUi = require('swagger-ui-express');
-const swaggerJsdoc = require('swagger-jsdoc');
-const fs = require('fs');
-const path = require('path');
+// ============================================================================
+// IMPORTS & DEPENDENCIES
+// ============================================================================
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const express = require('express');                    // Web framework for Node.js
+const cors = require('cors');                          // Enable Cross-Origin Resource Sharing
+const supabase = require('./db');                      // Supabase database client
+const swaggerUi = require('swagger-ui-express');       // Swagger UI for API documentation
+const swaggerJsdoc = require('swagger-jsdoc');         // JSDoc to Swagger converter
+const fs = require('fs');                              // File System module for file operations
+const path = require('path');                          // Path utilities for file paths
 
-const PORT = 3000;
+// ============================================================================
+// APP INITIALIZATION
+// ============================================================================
 
-// --- Swagger Setup ---
+const app = express();                                 // Create Express application
+app.use(cors());                                       // Enable CORS for all routes
+app.use(express.json());                               // Parse JSON request bodies
+
+const PORT = 3000;                                     // Server port
+
+// ============================================================================
+// SWAGGER DOCUMENTATION SETUP
+// ============================================================================
+// Swagger provides interactive API documentation at /api-docs
+
 const swaggerOptions = {
   definition: {
-    openapi: '3.0.0',
+    openapi: '3.0.0',                                  // OpenAPI version
     info: {
-      title: 'Event Management API',
-      version: '1.0.0',
+      title: 'Event Management API',                  // API title
+      version: '1.0.0',                               // API version
       description: 'API documentation for Events and Categories',
     },
     servers: [
       {
-        url: `http://localhost:${PORT}`,
+        url: `http://localhost:${PORT}`,              // Server URL
       },
     ],
   },
-  apis: ['./index.js'],
+  apis: ['./index.js'],                               // Files to scan for JSDoc comments
 };
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// --- File-based Storage Paths ---
-const ATTENDANCE_FILE = path.join(__dirname, 'attendance.json');
-const RATINGS_FILE = path.join(__dirname, 'ratings.json');
+const swaggerSpec = swaggerJsdoc(swaggerOptions);      // Generate Swagger documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec)); // Serve Swagger UI
 
-// --- Helper Functions: Read/Write Files ---
+// ============================================================================
+// FILE-BASED STORAGE PATHS
+// ============================================================================
+// These files store attendance and ratings data (instead of database)
 
+const ATTENDANCE_FILE = path.join(__dirname, 'attendance.json'); // Attendance records file
+const RATINGS_FILE = path.join(__dirname, 'ratings.json');       // Ratings records file
+
+// ============================================================================
+// HELPER FUNCTIONS: FILE OPERATIONS
+// ============================================================================
+
+/**
+ * Read attendance data from JSON file
+ * @returns {Array} Array of attendance records or empty array if error
+ */
 function readAttendance() {
   try {
+    // Check if file exists, if not create empty array
     if (!fs.existsSync(ATTENDANCE_FILE)) {
       fs.writeFileSync(ATTENDANCE_FILE, '[]');
     }
+    // Read file contents
     const data = fs.readFileSync(ATTENDANCE_FILE, 'utf8');
+    // Parse JSON string to JavaScript object
     return JSON.parse(data);
   } catch (error) {
     console.error('Error reading attendance:', error);
@@ -51,20 +77,32 @@ function readAttendance() {
   }
 }
 
+/**
+ * Write attendance data to JSON file
+ * @param {Array} attendance - Attendance records to save
+ */
 function writeAttendance(attendance) {
   try {
+    // Convert array to formatted JSON string (null, 2 = 2-space indentation)
     fs.writeFileSync(ATTENDANCE_FILE, JSON.stringify(attendance, null, 2));
   } catch (error) {
     console.error('Error writing attendance:', error);
   }
 }
 
+/**
+ * Read ratings data from JSON file
+ * @returns {Array} Array of rating records or empty array if error
+ */
 function readRatings() {
   try {
+    // Check if file exists, if not create empty array
     if (!fs.existsSync(RATINGS_FILE)) {
       fs.writeFileSync(RATINGS_FILE, '[]');
     }
+    // Read file contents
     const data = fs.readFileSync(RATINGS_FILE, 'utf8');
+    // Parse JSON string to JavaScript object
     return JSON.parse(data);
   } catch (error) {
     console.error('Error reading ratings:', error);
@@ -72,22 +110,41 @@ function readRatings() {
   }
 }
 
+/**
+ * Write ratings data to JSON file
+ * @param {Array} ratings - Rating records to save
+ */
 function writeRatings(ratings) {
   try {
+    // Convert array to formatted JSON string
     fs.writeFileSync(RATINGS_FILE, JSON.stringify(ratings, null, 2));
   } catch (error) {
     console.error('Error writing ratings:', error);
   }
 }
 
-// --- Root Endpoint ---
+// ============================================================================
+// ROOT ENDPOINT
+// ============================================================================
+
+/**
+ * GET / - Test endpoint to verify server is running
+ */
 app.get('/', (req, res) => {
   res.send('Backend running ✅');
 });
 
-// --- Events API ---
+// ============================================================================
+// EVENTS API ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/events - Fetch all events with their categories
+ * Returns: Array of event objects with category information
+ */
 app.get('/api/events', async (req, res) => {
   try {
+    // Query events table from Supabase
     const { data, error } = await supabase
       .from('events')
       .select(`
@@ -98,12 +155,14 @@ app.get('/api/events', async (req, res) => {
         location, 
         event_categories(category_id, category:categories(category_id, category_name))
       `)
-      .order('start_time', { ascending: true });
+      .order('start_time', { ascending: true }); // Sort by start time
 
     if (error) throw error;
 
+    // Transform data to include categories properly
     const eventsWithCategories = (data || []).map((event) => {
       let categories = [];
+      // Extract categories from join table
       if (event.event_categories && event.event_categories.length > 0) {
         categories = event.event_categories
           .filter((ec) => ec && ec.category)
@@ -122,9 +181,17 @@ app.get('/api/events', async (req, res) => {
   }
 });
 
-// --- Categories API ---
+// ============================================================================
+// CATEGORIES API ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/categories - Fetch all event categories
+ * Returns: Array of category objects
+ */
 app.get('/api/categories', async (req, res) => {
   try {
+    // Query categories table from Supabase
     const { data, error } = await supabase
       .from('categories')
       .select('category_id, category_name');
@@ -138,17 +205,26 @@ app.get('/api/categories', async (req, res) => {
   }
 });
 
-// --- Comments API (Database-based) ---
+// ============================================================================
+// COMMENTS API ENDPOINTS (DATABASE-BASED)
+// ============================================================================
+// Comments are stored in Supabase database (not in JSON files)
 
+/**
+ * GET /api/events/:eventId/comments - Fetch all comments for an event
+ * @param {number} eventId - Event ID
+ * Returns: Array of comment objects sorted by newest first
+ */
 app.get('/api/events/:eventId/comments', async (req, res) => {
   try {
     const { eventId } = req.params;
 
+    // Query comments table filtered by event_id
     const { data, error } = await supabase
       .from('comments')
       .select('*')
       .eq('event_id', parseInt(eventId))
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }); // Newest first
 
     if (error) throw error;
 
@@ -159,11 +235,18 @@ app.get('/api/events/:eventId/comments', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/events/:eventId/comments - Add a new comment to an event
+ * @param {number} eventId - Event ID
+ * Request body: { authorName: string, commentText: string }
+ * Returns: Created comment object
+ */
 app.post('/api/events/:eventId/comments', async (req, res) => {
   try {
     const { eventId } = req.params;
     const { authorName, commentText } = req.body;
 
+    // Validate input
     if (!authorName || !authorName.trim()) {
       return res.status(400).json({ error: 'Author name is required' });
     }
@@ -172,6 +255,7 @@ app.post('/api/events/:eventId/comments', async (req, res) => {
       return res.status(400).json({ error: 'Comment text is required' });
     }
 
+    // Insert new comment into database
     const { data, error } = await supabase
       .from('comments')
       .insert([
@@ -182,22 +266,27 @@ app.post('/api/events/:eventId/comments', async (req, res) => {
         }
       ])
       .select()
-      .single();
+      .single(); // Return the inserted row
 
     if (error) throw error;
 
-    res.status(201).json(data);
+    res.status(201).json(data); // 201 = Created
   } catch (err) {
     console.error('Error adding comment:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// SIMPLE DELETE - NO USERNAME REQUIRED
+/**
+ * DELETE /api/comments/:commentId - Delete a specific comment
+ * @param {number} commentId - Comment ID
+ * Returns: Success message
+ */
 app.delete('/api/comments/:commentId', async (req, res) => {
   try {
     const { commentId } = req.params;
 
+    // Delete comment from database
     const { error } = await supabase
       .from('comments')
       .delete()
@@ -212,21 +301,29 @@ app.delete('/api/comments/:commentId', async (req, res) => {
   }
 });
 
+/**
+ * PUT /api/comments/:commentId - Update a specific comment
+ * @param {number} commentId - Comment ID
+ * Request body: { commentText: string }
+ * Returns: Updated comment object
+ */
 app.put('/api/comments/:commentId', async (req, res) => {
   try {
     const { commentId } = req.params;
     const { commentText } = req.body;
 
+    // Validate input
     if (!commentText || !commentText.trim()) {
       return res.status(400).json({ error: 'Comment text is required' });
     }
 
+    // Update comment in database
     const { data, error } = await supabase
       .from('comments')
       .update({ comment_text: commentText.trim() })
       .eq('id', parseInt(commentId))
       .select()
-      .single();
+      .single(); // Return the updated row
 
     if (error) throw error;
 
@@ -237,19 +334,32 @@ app.put('/api/comments/:commentId', async (req, res) => {
   }
 });
 
-// --- Attendance API (File-based) ---
+// ============================================================================
+// ATTENDANCE API ENDPOINTS (FILE-BASED)
+// ============================================================================
+// Attendance records are stored in attendance.json file
 
+/**
+ * POST /api/events/:eventId/attend - Mark user as attending an event
+ * @param {number} eventId - Event ID
+ * Request body: { userName: string }
+ * Returns: Created attendance record
+ * Status 400: If user already marked as attending
+ */
 app.post('/api/events/:eventId/attend', (req, res) => {
   try {
     const { eventId } = req.params;
     const { userName } = req.body;
 
+    // Validate input
     if (!userName || !userName.trim()) {
       return res.status(400).json({ error: 'User name is required' });
     }
 
+    // Read current attendance records
     const attendance = readAttendance();
     
+    // Check if user already marked as attending this event
     const alreadyAttending = attendance.some(
       (a) => a.event_id === parseInt(eventId) && a.user_name === userName.trim()
     );
@@ -258,35 +368,45 @@ app.post('/api/events/:eventId/attend', (req, res) => {
       return res.status(400).json({ error: 'Already marked as attending' });
     }
 
+    // Create new attendance record
     const newAttendance = {
-      attendance_id: Date.now(),
+      attendance_id: Date.now(),              // Unique ID based on timestamp
       event_id: parseInt(eventId),
       user_name: userName.trim(),
-      created_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),   // ISO format timestamp
     };
 
+    // Add to array and save to file
     attendance.push(newAttendance);
     writeAttendance(attendance);
 
-    res.status(201).json(newAttendance);
+    res.status(201).json(newAttendance); // 201 = Created
   } catch (err) {
     console.error('Error marking attendance:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
+/**
+ * GET /api/events/:eventId/attendance - Get all attendees for an event
+ * @param {number} eventId - Event ID
+ * Returns: { count: number, attendees: Array }
+ */
 app.get('/api/events/:eventId/attendance', (req, res) => {
   try {
     const { eventId } = req.params;
+    
+    // Read all attendance records
     const attendance = readAttendance();
 
+    // Filter by event_id and sort by newest first
     const eventAttendance = attendance
       .filter((a) => a.event_id === parseInt(eventId))
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     res.json({
-      count: eventAttendance.length,
-      attendees: eventAttendance,
+      count: eventAttendance.length,        // Total number of attendees
+      attendees: eventAttendance,           // List of attendee objects
     });
   } catch (err) {
     console.error('Error fetching attendance:', err.message);
@@ -294,11 +414,20 @@ app.get('/api/events/:eventId/attendance', (req, res) => {
   }
 });
 
+/**
+ * GET /api/events/:eventId/check-attendance/:userName - Check if user is attending
+ * @param {number} eventId - Event ID
+ * @param {string} userName - User name
+ * Returns: { isAttending: boolean }
+ */
 app.get('/api/events/:eventId/check-attendance/:userName', (req, res) => {
   try {
     const { eventId, userName } = req.params;
+    
+    // Read all attendance records
     const attendance = readAttendance();
 
+    // Check if user exists in attendance list for this event
     const isAttending = attendance.some(
       (a) => a.event_id === parseInt(eventId) && a.user_name === userName
     );
@@ -310,21 +439,31 @@ app.get('/api/events/:eventId/check-attendance/:userName', (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/events/:eventId/attend - Remove user's attendance
+ * @param {number} eventId - Event ID
+ * Request body: { userName: string }
+ * Returns: Success message
+ */
 app.delete('/api/events/:eventId/attend', (req, res) => {
   try {
     const { eventId } = req.params;
     const { userName } = req.body;
 
+    // Validate input
     if (!userName) {
       return res.status(400).json({ error: 'User name is required' });
     }
 
+    // Read current attendance records
     let attendance = readAttendance();
 
+    // Filter out the attendance record for this user and event
     attendance = attendance.filter(
       (a) => !(a.event_id === parseInt(eventId) && a.user_name === userName)
     );
 
+    // Save updated records
     writeAttendance(attendance);
 
     res.json({ message: 'Attendance removed successfully' });
@@ -334,23 +473,37 @@ app.delete('/api/events/:eventId/attend', (req, res) => {
   }
 });
 
-// --- Ratings API (File-based) ---
+// ============================================================================
+// RATINGS API ENDPOINTS (FILE-BASED)
+// ============================================================================
+// Rating records are stored in ratings.json file
 
+/**
+ * POST /api/events/:eventId/rating - Submit a rating for an event
+ * @param {number} eventId - Event ID
+ * Request body: { userName: string, rating: number (1-5) }
+ * Returns: Created rating record
+ * Status 400: If user already rated or invalid rating
+ */
 app.post('/api/events/:eventId/rating', (req, res) => {
   try {
     const { eventId } = req.params;
     const { userName, rating } = req.body;
 
+    // Validate user name
     if (!userName || !userName.trim()) {
       return res.status(400).json({ error: 'User name is required' });
     }
 
+    // Validate rating (must be 1-5)
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({ error: 'Rating must be between 1 and 5' });
     }
 
+    // Read current ratings
     const ratings = readRatings();
 
+    // Check if user already rated this event
     const alreadyRated = ratings.some(
       (r) => r.event_id === parseInt(eventId) && r.user_name === userName.trim()
     );
@@ -359,42 +512,53 @@ app.post('/api/events/:eventId/rating', (req, res) => {
       return res.status(400).json({ error: 'You have already rated this event' });
     }
 
+    // Create new rating record
     const newRating = {
-      rating_id: Date.now(),
+      rating_id: Date.now(),                 // Unique ID based on timestamp
       event_id: parseInt(eventId),
       user_name: userName.trim(),
-      rating: parseInt(rating),
-      created_at: new Date().toISOString(),
+      rating: parseInt(rating),              // Convert to integer (1-5)
+      created_at: new Date().toISOString(),  // ISO format timestamp
     };
 
+    // Add to array and save to file
     ratings.push(newRating);
     writeRatings(ratings);
 
-    res.status(201).json(newRating);
+    res.status(201).json(newRating); // 201 = Created
   } catch (err) {
     console.error('Error submitting rating:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
+/**
+ * GET /api/events/:eventId/rating - Get all ratings for an event
+ * @param {number} eventId - Event ID
+ * Returns: { averageRating: number, totalRatings: number, ratings: Array }
+ */
 app.get('/api/events/:eventId/rating', (req, res) => {
   try {
     const { eventId } = req.params;
+    
+    // Read all ratings
     const ratings = readRatings();
 
+    // Filter by event_id and sort by newest first
     const eventRatings = ratings
       .filter((r) => r.event_id === parseInt(eventId))
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
+    // Calculate average rating
     const totalRatings = eventRatings.length;
     const averageRating = totalRatings > 0
       ? (eventRatings.reduce((sum, r) => sum + r.rating, 0) / totalRatings).toFixed(1)
       : 0;
 
     res.json({
-      averageRating: parseFloat(averageRating),
-      totalRatings,
-      ratings: eventRatings,
+      averageRating: parseFloat(averageRating),  // Convert to number
+      totalRatings,                              // Total count
+      ratings: eventRatings,                     // All ratings for this event
     });
   } catch (err) {
     console.error('Error fetching ratings:', err.message);
@@ -402,18 +566,27 @@ app.get('/api/events/:eventId/rating', (req, res) => {
   }
 });
 
+/**
+ * GET /api/events/:eventId/check-rating/:userName - Check if user already rated
+ * @param {number} eventId - Event ID
+ * @param {string} userName - User name
+ * Returns: { hasRated: boolean, userRating: number|null }
+ */
 app.get('/api/events/:eventId/check-rating/:userName', (req, res) => {
   try {
     const { eventId, userName } = req.params;
+    
+    // Read all ratings
     const ratings = readRatings();
 
+    // Find user's rating for this event
     const userRating = ratings.find(
       (r) => r.event_id === parseInt(eventId) && r.user_name === userName
     );
 
     res.json({
-      hasRated: !!userRating,
-      userRating: userRating ? userRating.rating : null,
+      hasRated: !!userRating,                     // Boolean: has user rated?
+      userRating: userRating ? userRating.rating : null, // User's rating or null
     });
   } catch (err) {
     console.error('Error checking rating:', err.message);
@@ -421,5 +594,19 @@ app.get('/api/events/:eventId/check-rating/:userName', (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+// ============================================================================
+// START SERVER
+// ============================================================================
+
+/**
+ * Start Express server and listen for requests
+ */
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
+});
+
+// ============================================================================
+// END OF FILE
+// ============================================================================
 
