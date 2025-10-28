@@ -1,27 +1,62 @@
-import React, { useState, useEffect } from 'react';
+// ============================================================================
+// IMPORTS & DEPENDENCIES
+// ============================================================================
 
+import React, { useState, useEffect } from 'react';  // React hooks for state and lifecycle
+
+// ============================================================================
+// COMMENTSECTION COMPONENT
+// ============================================================================
+// Manages event comments with create and delete functionality
+
+/**
+ * CommentSection Component
+ * Displays comments for an event and allows users to add/delete comments
+ * Fetches data from backend API
+ * @param {string} eventId - Event identifier for API calls
+ */
 const CommentSection = ({ eventId }) => {
-  const [comments, setComments] = useState([]);
-  const [authorName, setAuthorName] = useState('');
-  const [commentText, setCommentText] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
+  // ================================================================
+  // STATE MANAGEMENT - Comments Section
+  // ================================================================
+  
+  const [comments, setComments] = useState([]);           // All comments for this event
+  const [authorName, setAuthorName] = useState('');       // Current user's name
+  const [commentText, setCommentText] = useState('');     // Current comment text being typed
+  const [loading, setLoading] = useState(false);          // Loading state for add operation
+  const [deletingId, setDeletingId] = useState(null);     // ID of comment being deleted
 
+  /**
+   * Fetch comments on component mount
+   * Runs once when component is created
+   */
   useEffect(() => {
     fetchComments();
   }, [eventId]);
 
+  /**
+   * Retrieves all comments for the event from backend API
+   * Calls GET /api/events/:eventId/comments endpoint
+   */
   const fetchComments = async () => {
     try {
+      // Send GET request to fetch all comments for this event
       const response = await fetch(`http://localhost:3000/api/events/${eventId}/comments`);
       const data = await response.json();
+      // Update state with fetched comments
       setComments(data);
     } catch (error) {
       console.error('Error fetching comments:', error);
     }
   };
 
+  /**
+   * Submits a new comment to the backend
+   * Validates input fields before submission
+   * Calls POST /api/events/:eventId/comments endpoint
+   */
   const addComment = async () => {
+    // Validate both fields are filled and not just whitespace
     if (!authorName.trim() || !commentText.trim()) {
       alert('Please fill in all fields');
       return;
@@ -29,15 +64,21 @@ const CommentSection = ({ eventId }) => {
     
     setLoading(true);
     try {
+      // Send POST request to create comment
       const response = await fetch(`http://localhost:3000/api/events/${eventId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ authorName: authorName.trim(), commentText: commentText.trim() })
+        body: JSON.stringify({ 
+          authorName: authorName.trim(), 
+          commentText: commentText.trim() 
+        })
       });
 
       if (response.ok) {
+        // Clear form fields on success
         setAuthorName('');
         setCommentText('');
+        // Refresh comments list to show new comment
         fetchComments();
       } else {
         alert('Failed to add comment');
@@ -50,17 +91,25 @@ const CommentSection = ({ eventId }) => {
     }
   };
 
+  /**
+   * Deletes a comment after user confirmation
+   * Calls DELETE /api/comments/:commentId endpoint
+   * @param {string} commentId - ID of comment to delete
+   */
   const deleteComment = async (commentId) => {
+    // Confirm deletion with user before proceeding
     if (!window.confirm('Are you sure you want to delete this comment?')) return;
 
     setDeletingId(commentId);
     try {
+      // Send DELETE request to remove comment
       const response = await fetch(`http://localhost:3000/api/comments/${commentId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       });
 
       if (response.ok) {
+        // Refresh comments list after successful deletion
         fetchComments();
       } else {
         alert('Failed to delete comment');
@@ -73,11 +122,18 @@ const CommentSection = ({ eventId }) => {
     }
   };
 
+  // ================================================================
+  // RENDER - Comments Section UI
+  // ================================================================
+
   return (
     <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+      {/* Header with title and comment count badge */}
       <h4 className="font-semibold text-blue-900 mb-3">💬 Comments ({comments.length})</h4>
       
+      {/* Comment input form */}
       <div className="space-y-2 mb-3">
+        {/* Author name input field */}
         <input
           type="text"
           placeholder="Your name"
@@ -85,6 +141,8 @@ const CommentSection = ({ eventId }) => {
           onChange={(e) => setAuthorName(e.target.value)}
           className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
         />
+        
+        {/* Comment text textarea */}
         <textarea
           placeholder="Add your comment..."
           value={commentText}
@@ -92,6 +150,8 @@ const CommentSection = ({ eventId }) => {
           className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
           rows="3"
         />
+        
+        {/* Submit comment button */}
         <button
           onClick={addComment}
           disabled={loading}
@@ -101,21 +161,27 @@ const CommentSection = ({ eventId }) => {
         </button>
       </div>
 
+      {/* Display comments or empty state */}
       {comments.length === 0 ? (
+        // Empty state - shown when no comments exist
         <p className="text-blue-700 text-sm text-center py-3">No comments yet. Be the first!</p>
       ) : (
+        // Comments list with scrollable container
         <div className="space-y-2 max-h-60 overflow-y-auto">
           {comments.map((comment) => (
             <div key={comment.id} className="p-3 bg-white rounded-lg border border-blue-200">
+              {/* Comment header with author name and date */}
               <div className="flex justify-between items-start mb-1">
                 <span className="font-semibold text-blue-900 text-sm">{comment.author_name}</span>
                 <span className="text-xs text-blue-600">
                   {new Date(comment.created_at).toLocaleDateString()}
                 </span>
               </div>
+              
+              {/* Comment text content */}
               <p className="text-blue-800 text-sm mb-2">{comment.comment_text}</p>
               
-              {/* DELETE BUTTON */}
+              {/* Delete button for individual comments */}
               <button
                 onClick={() => deleteComment(comment.id)}
                 disabled={deletingId === comment.id}
@@ -130,5 +196,9 @@ const CommentSection = ({ eventId }) => {
     </div>
   );
 };
+
+// ============================================================================
+// EXPORT
+// ============================================================================
 
 export default CommentSection;
