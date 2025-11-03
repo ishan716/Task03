@@ -310,6 +310,26 @@ const EventsScreen = () => {
                     {event.end_time && ` - ${formatDate(event.end_time)}`}
                   </p>
 
+                  {/* Categories - show as small badges under date/time */}
+                  {(event.categories && event.categories.length > 0) ? (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {event.categories.map((c, idx) => (
+                        <span
+                          key={c.category_id || c.category_name || idx}
+                          className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100"
+                        >
+                          {c.category_name || c.name || 'Category'}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mb-3">
+                      <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 border border-gray-200">No category</span>
+                    </div>
+                  )}
+
+                  
+
                   {/* Location */}
                   <p className="text-gray-600 text-sm mb-3 flex items-center">
                     <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
