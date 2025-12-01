@@ -33,9 +33,18 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
  * Initialize Supabase Client
  * Creates a client instance for frontend database operations
  * Used for real-time data sync, authentication, and database queries
+ * Configured with auth persistence to maintain login sessions
  * @type {SupabaseClient}
  */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,              // Persist auth session in localStorage
+    autoRefreshToken: true,            // Automatically refresh expired tokens
+    detectSessionInUrl: true,          // Detect OAuth callbacks in URL
+    storage: window.localStorage,      // Use localStorage for session storage
+    storageKey: 'supabase.auth.token', // Key for storing auth token
+  }
+})
 
 // ============================================================================
 // END OF FILE

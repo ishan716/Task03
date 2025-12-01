@@ -9,6 +9,9 @@ const swaggerUi = require('swagger-ui-express');       // Swagger UI for API doc
 const swaggerJsdoc = require('swagger-jsdoc');         // JSDoc to Swagger converter
 const fs = require('fs');                              // File System module for file operations
 const path = require('path');                          // Path utilities for file paths
+const authRoutes = require('./routes/auth');           // Organizer authentication routes
+const googleAuthRoutes = require('./routes/google-auth'); // Google authentication routes
+const organizerRoutes = require('./routes/organizer'); // Organizer management routes
 
 // ============================================================================
 // APP INITIALIZATION
@@ -19,6 +22,19 @@ app.use(cors());                                       // Enable CORS for all ro
 app.use(express.json());                               // Parse JSON request bodies
 
 const PORT = 3000;                                     // Server port
+
+// ============================================================================
+// ROUTES SETUP
+// ============================================================================
+
+// Organizer Authentication Routes
+app.use('/api/auth', authRoutes);
+
+// Google Authentication Routes
+app.use('/api/auth/google', googleAuthRoutes);
+
+// Organizer Management Routes
+app.use('/api/organizer', organizerRoutes);
 
 // ============================================================================
 // SWAGGER DOCUMENTATION SETUP
@@ -145,6 +161,120 @@ function writeRatings(ratings) {
 app.get('/', (req, res) => {
   res.send('Backend running ✅');
 });
+
+// ============================================================================
+// ORGANIZER AUTHENTICATION ENDPOINTS
+// ============================================================================
+
+/**
+ * @swagger
+ * /api/auth/check-organizer:
+ *   post:
+ *     summary: Check if a user is an organizer
+ *     description: Verifies if a user has organizer role in the system
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: Email address to check
+ *     responses:
+ *       200:
+ *         description: Organizer status check result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   description: Request success status
+ *                 isOrganizer:
+ *                   type: boolean
+ *                   description: True if user is organizer
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                 error:
+ *                   type: string
+ *                   description: Error message if failed
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Server error
+ */
+// Note: This endpoint is defined in routes/auth.js but documented here for Swagger
+
+// ============================================================================
+// GOOGLE AUTHENTICATION ENDPOINTS
+// ============================================================================
+
+/**
+ * @swagger
+ * /api/auth/google:
+ *   post:
+ *     summary: Authenticate user with Google OAuth
+ *     description: Verifies Google ID token and returns user information
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 description: Google ID token from client-side authentication
+ *     responses:
+ *       200:
+ *         description: Google authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     picture:
+ *                       type: string
+ *                 message:
+ *                   type: string
+ *                   example: Google authentication successful
+ *       400:
+ *         description: Invalid token or missing fields
+ *       401:
+ *         description: Authentication failed
+ *       500:
+ *         description: Server error
+ */
+// Note: This endpoint is defined in routes/google-auth.js but documented here for Swagger
 
 // ============================================================================
 // EVENTS API ENDPOINTS
@@ -1080,6 +1210,9 @@ app.get('/api/events/:eventId/check-rating/:userName', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
+  console.log(`🔐 Organizer Auth API: http://localhost:${PORT}/api/auth/check-organizer`);
+  console.log(`🔐 Google Auth API: http://localhost:${PORT}/api/auth/google`);
+  console.log(`👤 Organizer Management API: http://localhost:${PORT}/api/organizer`);
 });
 
 // ============================================================================

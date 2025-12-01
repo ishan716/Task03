@@ -55,7 +55,7 @@ const ShareButton = ({ event, eventId }) => {
 // EVENTSSCREEN COMPONENT (MAIN)
 // ============================================================================
 
-const EventsScreen = () => {
+const EventsScreen = ({ user }) => {
   // State management
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -391,7 +391,7 @@ const EventsScreen = () => {
                   {expandedEventId === eventId && (
                     <>
                       <AttendanceSection eventId={eventId} />
-                      <CommentSection eventId={eventId} />
+                      <CommentSection eventId={eventId} user={user} />
                     </>
                   )}
                 </div>
@@ -405,3 +405,5 @@ const EventsScreen = () => {
 };
 
 export default EventsScreen;
+
+
