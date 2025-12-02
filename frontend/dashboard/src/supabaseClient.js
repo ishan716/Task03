@@ -1,125 +1,43 @@
-// // ============================================================================
-// // IMPORTS & DEPENDENCIES
-// // ============================================================================
-
-// import { createClient } from '@supabase/supabase-js'  // Supabase client library
-
-// // ============================================================================
-// // SUPABASE CONFIGURATION
-// // ============================================================================
-// // Initialize Supabase client with project credentials
-// // These credentials are for frontend (anonymous) access only
-
-// /**
-//  * Supabase Project URL
-//  * Unique URL for your Supabase project instance
-//  * Used to connect to your backend database
-//  */
-// const supabaseUrl = 'https://nvpknwtppuejrffaswlh.supabase.co'
-
-// /**
-//  * Supabase Anonymous Key
-//  * Public API key for frontend authentication
-//  * Allows unauthenticated read/write operations based on Row Level Security policies
-//  * WARNING: This key is visible in client-side code and should be treated as public
-//  */
-// const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cGtud3RwcHVlanJmZmFzd2xoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NzY0OTAsImV4cCI6MjA3MjE1MjQ5MH0.6acQrRjS5RUXOF9j3TqZ0ikj6oVzA71opR5gIa6NFsQ'
-
-// // ============================================================================
-// // CREATE SUPABASE CLIENT
-// // ============================================================================
-
-// /**
-//  * Initialize Supabase Client
-//  * Creates a client instance for frontend database operations
-//  * Used for real-time data sync, authentication, and database queries
-//  * Configured with auth persistence to maintain login sessions
-//  * @type {SupabaseClient}
-//  */
-// export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-//   auth: {
-//     persistSession: true,              // Persist auth session in localStorage
-//     autoRefreshToken: true,            // Automatically refresh expired tokens
-//     detectSessionInUrl: true,          // Detect OAuth callbacks in URL
-//     storage: window.localStorage,      // Use localStorage for session storage
-//     storageKey: 'supabase.auth.token', // Key for storing auth token
-//   }
-// })
-
-// // ============================================================================
-// // END OF FILE
-// // ============================================================================
-
 // ============================================================================
 // IMPORTS & DEPENDENCIES
 // ============================================================================
 
-import { createClient } from '@supabase/supabase-js'  // Supabase client library
+import { createClient } from '@supabase/supabase-js'
 
 // ============================================================================
-// SUPABASE CONFIGURATION
+// SUPABASE CONFIGURATION FROM ENVIRONMENT VARIABLES
 // ============================================================================
-// Initialize Supabase client with project credentials
-// These credentials are for frontend (anonymous) access only
 
-/**
- * Supabase Project URL
- * Unique URL for your Supabase project instance
- * Used to connect to your backend database
- */
-const supabaseUrl = 'https://nvpknwtppuejrffaswlh.supabase.co'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-/**
- * Supabase Anonymous Key
- * Public API key for frontend authentication
- * Allows unauthenticated read/write operations based on Row Level Security policies
- * WARNING: This key is visible in client-side code and should be treated as public
- */
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cGtud3RwcHVlanJmZmFzd2xoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NzY0OTAsImV4cCI6MjA3MjE1MjQ5MH0.6acQrRjS5RUXOF9j3TqZ0ikj6oVzA71opR5gIa6NFsQ'
+// Validate environment variables
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables. Please check your .env file.')
+}
 
 // ============================================================================
 // BACKEND URL CONFIGURATION
 // ============================================================================
 
-/**
- * Backend API URL Configuration
- * Use environment variable for flexibility between development and production
- * VITE_API_URL should be set in .env files for different environments
- * Fallback to localhost for development if environment variable is not set
- */
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://event-manager-app-jade.vercel.app';
+export const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://event-manager-app-jade.vercel.app'
 
 // ============================================================================
 // CREATE SUPABASE CLIENT
 // ============================================================================
 
-/**
- * Initialize Supabase Client
- * Creates a client instance for frontend database operations
- * Used for real-time data sync, authentication, and database queries
- * Configured with auth persistence to maintain login sessions
- * @type {SupabaseClient}
- */
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true,              // Persist auth session in localStorage
-    autoRefreshToken: true,            // Automatically refresh expired tokens
-    detectSessionInUrl: true,          // Detect OAuth callbacks in URL
-    storage: window.localStorage,      // Use localStorage for session storage
-    storageKey: 'supabase.auth.token', // Key for storing auth token
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: window.localStorage,
+    storageKey: 'supabase.auth.token',
   }
 })
 
-// ============================================================================
-// EXPORT BACKEND URL
-// ============================================================================
-
-/**
- * Export BACKEND_URL for use in other components
- * This allows frontend components to make API calls to the backend server
- */
-export { BACKEND_URL }
-
-// ============================================================================
-// END OF FILE
-// ============================================================================
+// Log configuration in development
+if (import.meta.env.DEV) {
+  console.log('🔧 Supabase configured with URL:', supabaseUrl)
+  console.log('🔧 Backend URL:', BACKEND_URL)
+}
